@@ -25,23 +25,23 @@
         /* 탭 스타일 */
         .tabs {
             display: flex;
-            margin-bottom: 20px;
             border-bottom: 2px solid #ddd;
         }
         .tab-button {
-            padding: 10px 15px;
+            padding: 15px 20px;
             cursor: pointer;
             border: none;
             background: #eee;
             margin-right: 5px;
             border-top-left-radius: 5px;
             border-top-right-radius: 5px;
+            font-size: 1.2em;
             font-weight: bold;
             transition: background 0.3s;
         }
         .tab-button.active {
             background: #fff;
-            border-bottom: 2px solid #007bff;
+            border-bottom: 3px solid #007bff;
             color: #007bff;
         }
         .tab-content {
@@ -51,22 +51,29 @@
         .tab-content.active {
             display: block;
         }
+        .tab-content.active p:first-child {
+            margin-bottom: 5px;
+        }
 
         /* 폼 및 입력 스타일 */
         .input-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
         .input-group label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
         }
-        .input-group input[type="number"] {
+        .input-group input[type="number"],
+        .input-group input[type="text"] {
             width: calc(100% - 22px);
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
+
+            font-size: 1em;
+            color: #333;
         }
         .input-group span {
             margin-left: 5px;
@@ -78,9 +85,9 @@
         .settings-toggle {
             cursor: pointer;
             color: #007bff;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
             display: inline-block;
-            font-size: 0.9em;
+            font-size: 1.1em;
         }
         .settings-content {
             border: 1px solid #eee;
@@ -93,12 +100,13 @@
         /* 버튼 및 결과 스타일 */
         button#calculate {
             width: 100%;
-            padding: 10px;
+            margin-top: 30px;
+            padding: 20px;
             background-color: #007bff;
             color: white;
             border: none;
             border-radius: 4px;
-            font-size: 1.1em;
+            font-size: 1.5em;
             cursor: pointer;
             transition: background-color 0.3s;
         }
@@ -106,7 +114,7 @@
             background-color: #0056b3;
         }
         .result {
-            margin-top: 20px;
+            margin-top: 10px;
             padding: 15px;
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -123,6 +131,10 @@
         .loss {
             color: red;
             font-weight: bold;
+        }
+        .result h2 {
+            margin-top: 0px;
+            margin-bottom: 12px;
         }
 
         /* 모바일 반응형 */
@@ -150,36 +162,38 @@
         </div>
 
         <div id="domestic" class="tab-content active">
-            <p><strong>국내 주식</strong>은 **거래세**와 **증권사 수수료**가 적용됩니다.</p>
-            <div class="input-form">
-                <div class="input-group"><label for="buyPriceD">매수 가격 (원)</label><input type="number" id="buyPriceD" placeholder="예: 10000"></div>
-                <div class="input-group"><label for="sellPriceD">매도 가격 (원)</label><input type="number" id="sellPriceD" placeholder="예: 11000"></div>
-                <div class="input-group"><label for="quantityD">수량 (주)</label><input type="number" id="quantityD" placeholder="예: 10"></div>
-            </div>
-            
-            <div class="settings-toggle" onclick="toggleSettings('settingsD')">⚙️ 수수료/세금 설정 (클릭하여 수정)</div>
+            <p><strong>국내 주식</strong>은 거래세와 증권사 수수료가 적용됩니다.</p>
+
+            <div class="settings-toggle" onclick="toggleSettings('settingsD')">⚙️ 수수료/세금 설정</div>
             <div id="settingsD" class="settings-content" style="display:none;">
                 <div class="input-group"><label for="commRateD">증권사 수수료율 (매수/매도 시, %)</label><input type="number" id="commRateD" value="0.015" step="0.001"><span> (기본: 0.015%)</span></div>
                 <div class="input-group"><label for="taxRateD">거래세율 (매도 시, %)</label><input type="number" id="taxRateD" value="0.20" step="0.01"><span> (기본: 0.20%)</span></div>
+            </div>
+
+            <div class="input-form">
+                <div class="input-group"><label for="buyPriceD">매수 가격 (원)</label><input type="text" id="buyPriceD" placeholder="예: 10,000" oninput="autoFormat(this)"></div>
+                <div class="input-group"><label for="sellPriceD">매도 가격 (원)</label><input type="text" id="sellPriceD" placeholder="예: 11,000" oninput="autoFormat(this)"></div>
+                <div class="input-group"><label for="quantityD">수량 (주)</label><input type="text" id="quantityD" placeholder="예: 10" oninput="autoFormat(this)"></div>
             </div>
 
             <button id="calculate" onclick="calculateProfit('domestic')">손익 계산하기</button>
         </div>
 
         <div id="global" class="tab-content">
-            <p><strong>해외 주식</strong>은 **양도소득세**와 **증권사 수수료**가 적용됩니다.</p>
-            <div class="input-form">
-                <div class="input-group"><label for="buyPriceG">매수 가격 (달러, USD)</label><input type="number" id="buyPriceG" placeholder="예: 100"></div>
-                <div class="input-group"><label for="sellPriceG">매도 가격 (달러, USD)</label><input type="number" id="sellPriceG" placeholder="예: 110"></div>
-                <div class="input-group"><label for="quantityG">수량 (주)</label><input type="number" id="quantityG" placeholder="예: 10"></div>
-                <div class="input-group"><label for="exchangeRateG">적용 환율 (원/USD)</label><input type="number" id="exchangeRateG" placeholder="예: 1300" value="1300"></div>
-            </div>
+            <p><strong>해외 주식</strong>은 양도소득세와 증권사 수수료가 적용됩니다.</p>
 
-            <div class="settings-toggle" onclick="toggleSettings('settingsG')">⚙️ 수수료/세금 설정 (클릭하여 수정)</div>
+            <div class="settings-toggle" onclick="toggleSettings('settingsG')">⚙️ 수수료/세금/환율 설정</div>
             <div id="settingsG" class="settings-content" style="display:none;">
                 <div class="input-group"><label for="commRateG">증권사 수수료율 (매수/매도 시, %)</label><input type="number" id="commRateG" value="0.10" step="0.01"><span> (기본: 0.10%)</span></div>
                 <div class="input-group"><label for="taxRateG">양도소득세율 (이익 발생 시, %)</label><input type="number" id="taxRateG" value="22.0" step="0.1"><span> (기본: 22.0% - 지방소득세 포함)</span></div>
-                <div class="input-group"><label for="taxBaseG">양도소득 기본공제 (원)</label><input type="number" id="taxBaseG" value="2500000" step="100000"><span> (기본: 250만 원)</span></div>
+                <div class="input-group"><label for="taxBaseG">양도소득세 기본 공제 (원)</label><input type="text" id="taxBaseG" value="2,500,000" step="100,000,000" oninput="autoFormat(this)"><span> (기본: 250만 원)</span></div>
+                <div class="input-group"><label for="exchangeRateG">적용 환율 (원/USD)</label><input type="text" id="exchangeRateG" placeholder="예: 1,300" value="1,300" oninput="autoFormat(this)"></div>
+            </div>
+
+            <div class="input-form">
+                <div class="input-group"><label for="buyPriceG">매수 가격 (달러, USD)</label><input type="text" id="buyPriceG" placeholder="예: 100" oninput="autoFormat(this)"></div>
+                <div class="input-group"><label for="sellPriceG">매도 가격 (달러, USD)</label><input type="text" id="sellPriceG" placeholder="예: 110" oninput="autoFormat(this)"></div>
+                <div class="input-group"><label for="quantityG">수량 (주)</label><input type="text" id="quantityG" placeholder="예: 10" oninput="autoFormat(this)"></div>
             </div>
 
             <button id="calculate" onclick="calculateProfit('global')">손익 계산하기</button>
@@ -207,6 +221,37 @@
             resultDiv.innerHTML = '<p>여기에 계산 결과가 표시됩니다.</p>';
         }
 
+        // 입력 필드에 쉼표를 자동으로 추가하고, 쉼표 없는 숫자 값을 반환하는 함수
+        function autoFormat(input) {
+            // 1. 숫자(0-9)와 소수점(.)을 제외한 모든 문자를 제거하여 순수한 숫자 문자열을 얻습니다.
+            let cleanValue = input.value.replace(/[^\d.]/g, '');
+
+            // 2. 소수점 처리: 소수점이 두 개 이상 입력된 경우 첫 번째 소수점만 남깁니다.
+            let decimalIndex = cleanValue.indexOf('.');
+            if (decimalIndex !== -1) {
+                // 정수부와 소수부 분리
+                let integerPart = cleanValue.substring(0, decimalIndex);
+                // 첫 번째 소수점 이후에 있는 다른 소수점들은 제거
+                let decimalPart = cleanValue.substring(decimalIndex + 1).replace(/\./g, '');
+                
+                // 다시 합치기
+                cleanValue = integerPart + '.' + decimalPart;
+            }
+            
+            // 3. 쉼표를 추가하기 위해 정수부와 소수부를 최종적으로 분리합니다.
+            let parts = cleanValue.split('.');
+            let integerPart = parts[0];
+            let decimalPart = parts.length > 1 ? '.' + parts[1] : '';
+
+            // 4. 정수부에 세 자리마다 쉼표를 추가합니다.
+            // \B: 단어 경계가 아닌 위치 (숫자 사이)
+            // (?=(\d{3})+(?!\d)): 뒤에 3자리 숫자가 반복되고 더 이상 숫자가 아닌 것(종료)이 아닌 패턴
+            integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            
+            // 5. 쉼표가 적용된 최종 값을 입력 필드에 다시 넣어줍니다.
+            input.value = integerPart + decimalPart;
+        }
+
         // 수수료/세금 설정 영역 토글 기능
         function toggleSettings(settingsId) {
             const settingsDiv = document.getElementById(settingsId);
@@ -228,21 +273,21 @@
 
             // 1. 입력 값 가져오기
             if (type === 'domestic') {
-                buyPrice = parseFloat(document.getElementById('buyPriceD').value);
-                sellPrice = parseFloat(document.getElementById('sellPriceD').value);
-                quantity = parseInt(document.getElementById('quantityD').value);
+                buyPrice = parseFloat(document.getElementById('buyPriceD').value.replace(/,/g, ''));
+                sellPrice = parseFloat(document.getElementById('sellPriceD').value.replace(/,/g, ''));
+                quantity = parseInt(document.getElementById('quantityD').value.replace(/,/g, ''));
                 commRate = parseFloat(document.getElementById('commRateD').value) / 100; // % -> 소수
                 taxRate = parseFloat(document.getElementById('taxRateD').value) / 100; // % -> 소수
                 currencyUnit = '원';
                 taxName = '거래세';
             } else if (type === 'global') {
-                buyPrice = parseFloat(document.getElementById('buyPriceG').value);
-                sellPrice = parseFloat(document.getElementById('sellPriceG').value);
-                quantity = parseInt(document.getElementById('quantityG').value);
-                const exchangeRate = parseFloat(document.getElementById('exchangeRateG').value);
+                buyPrice = parseFloat(document.getElementById('buyPriceG').value.replace(/,/g, ''));
+                sellPrice = parseFloat(document.getElementById('sellPriceG').value.replace(/,/g, ''));
+                quantity = parseInt(document.getElementById('quantityG').value.replace(/,/g, ''));
+                const exchangeRate = parseFloat(document.getElementById('exchangeRateG').value.replace(/,/g, ''));
                 commRate = parseFloat(document.getElementById('commRateG').value) / 100; // % -> 소수
                 taxRate = parseFloat(document.getElementById('taxRateG').value) / 100; // % -> 소수 (양도소득세)
-                taxBase = parseInt(document.getElementById('taxBaseG').value); // 기본공제
+                taxBase = parseInt(document.getElementById('taxBaseG').value.replace(/,/g, '')); // 기본 공제
                 currencyUnit = '원';
                 taxName = '양도소득세';
 
@@ -258,7 +303,7 @@
 
             // 2. 입력 유효성 검사
             if (isNaN(buyPrice) || isNaN(sellPrice) || isNaN(quantity) || quantity <= 0) {
-                resultDiv.innerHTML = '<p style="color:red;">⚠️ **매수/매도 가격 및 수량**을 정확히 입력해 주세요.</p>';
+                resultDiv.innerHTML = '<p style="color:red;">⚠️ 매수/매도 가격 및 수량을 정확히 입력해 주세요.</p>';
                 return;
             }
 
@@ -301,12 +346,14 @@
             
             let resultHTML = `
                 <h2>💰 계산 결과</h2>
-                <p>총 매수 금액 (수수료 포함): **${formatNumber(totalBuy + buyComm)} ${currencyUnit}**</p>
-                <p>총 매도 금액 (수수료 차감 전): **${formatNumber(totalSell)} ${currencyUnit}**</p>
-                <hr>
+                <p>매수 금액 (원금): ${formatNumber(totalBuy)} ${currencyUnit}</p>
                 <p>매수 수수료 (${(commRate * 100).toFixed(3)}%): ${formatNumber(buyComm)} ${currencyUnit}</p>
+                <p>총 매수 금액 (수수료 포함): ${formatNumber(totalBuy + buyComm)} ${currencyUnit}</p>
+                <hr>
+                <p>매도 금액 (수수료 및 세금 차감 전): ${formatNumber(totalSell)} ${currencyUnit}</p>
                 <p>매도 수수료 (${(commRate * 100).toFixed(3)}%): ${formatNumber(sellComm)} ${currencyUnit}</p>
                 <p>${taxName} (${(taxRate * 100).toFixed(2)}%): ${formatNumber(totalTax)} ${currencyUnit}</p>
+                <p>총 매도 금액 (수수료 및 세금 차감 후): ${formatNumber(totalSell - sellComm - totalTax)} ${currencyUnit}</p>
                 <hr>
                 <p>세전 손익: ${formatNumber(profitLossBeforeTax)} ${currencyUnit}</p>
                 <p><strong>최종 손익 (세후): <span class="${profitLossClass}">${formatNumber(netProfitLoss)} ${currencyUnit}</span></strong></p>
@@ -314,7 +361,7 @@
             `;
             
             if (type === 'global') {
-                resultHTML += `<p style="font-size:0.9em; margin-top:10px;">(참고: 해외 주식 양도소득세는 기본 공제 ${formatNumber(taxBase)}원 적용 후 계산됩니다.)</p>`;
+                resultHTML += `<p style="font-size:0.9em; margin-top:10px;">(양도소득세 기본 공제 ${formatNumber(taxBase)}원이 적용된 가격입니다.)</p>`;
             }
 
             resultDiv.innerHTML = resultHTML;
