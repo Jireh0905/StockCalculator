@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주식 손익 계산기</title>
+    <style>
+        /* 기본 스타일 */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        .calculator-container {
+            max-width: 600px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 탭 스타일 */
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-button {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: none;
+            background: #eee;
+            margin-right: 5px;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .tab-button.active {
+            background: #fff;
+            border-bottom: 2px solid #007bff;
+            color: #007bff;
+        }
+        .tab-content {
+            display: none;
+            padding: 10px 0;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 폼 및 입력 스타일 */
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-group input[type="number"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .input-group span {
+            margin-left: 5px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        /* 설정 영역 스타일 */
+        .settings-toggle {
+            cursor: pointer;
+            color: #007bff;
+            margin-bottom: 10px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+        .settings-content {
+            border: 1px solid #eee;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            background-color: #f9f9f9;
+        }
+
+        /* 버튼 및 결과 스타일 */
+        button#calculate {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button#calculate:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #e9ecef;
+            font-size: 1.1em;
+        }
+        .result p {
+            margin: 5px 0;
+        }
+        .profit {
+            color: green;
+            font-weight: bold;
+        }
+        .loss {
+            color: red;
+            font-weight: bold;
+        }
+
+        /* 모바일 반응형 */
+        @media (max-width: 500px) {
+            body {
+                padding: 10px;
+            }
+            .calculator-container {
+                padding: 15px;
+            }
+            .tab-button {
+                flex-grow: 1;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <h1>📊 주식 손익 계산기</h1>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab('domestic')">🇰🇷 국내 주식</button>
+            <button class="tab-button" onclick="openTab('global')">🌎 해외 주식</button>
+        </div>
+
+        <div id="domestic" class="tab-content active">
+            <p><strong>국내 주식</strong>은 **거래세**와 **증권사 수수료**가 적용됩니다.</p>
+            <div class="input-form">
+                <div class="input-group"><label for="buyPriceD">매수 가격 (원)</label><input type="number" id="buyPriceD" placeholder="예: 10000"></div>
+                <div class="input-group"><label for="sellPriceD">매도 가격 (원)</label><input type="number" id="sellPriceD" placeholder="예: 11000"></div>
+                <div class="input-group"><label for="quantityD">수량 (주)</label><input type="number" id="quantityD" placeholder="예: 10"></div>
+            </div>
+            
+            <div class="settings-toggle" onclick="toggleSettings('settingsD')">⚙️ 수수료/세금 설정 (클릭하여 수정)</div>
+            <div id="settingsD" class="settings-content" style="display:none;">
+                <div class="input-group"><label for="commRateD">증권사 수수료율 (매수/매도 시, %)</label><input type="number" id="commRateD" value="0.015" step="0.001"><span> (기본: 0.015%)</span></div>
+                <div class="input-group"><label for="taxRateD">거래세율 (매도 시, %)</label><input type="number" id="taxRateD" value="0.20" step="0.01"><span> (기본: 0.20%)</span></div>
+            </div>
+
+            <button id="calculate" onclick="calculateProfit('domestic')">손익 계산하기</button>
+        </div>
+
+        <div id="global" class="tab-content">
+            <p><strong>해외 주식</strong>은 **양도소득세**와 **증권사 수수료**가 적용됩니다.</p>
+            <div class="input-form">
+                <div class="input-group"><label for="buyPriceG">매수 가격 (달러, USD)</label><input type="number" id="buyPriceG" placeholder="예: 100"></div>
+                <div class="input-group"><label for="sellPriceG">매도 가격 (달러, USD)</label><input type="number" id="sellPriceG" placeholder="예: 110"></div>
+                <div class="input-group"><label for="quantityG">수량 (주)</label><input type="number" id="quantityG" placeholder="예: 10"></div>
+                <div class="input-group"><label for="exchangeRateG">적용 환율 (원/USD)</label><input type="number" id="exchangeRateG" placeholder="예: 1300" value="1300"></div>
+            </div>
+
+            <div class="settings-toggle" onclick="toggleSettings('settingsG')">⚙️ 수수료/세금 설정 (클릭하여 수정)</div>
+            <div id="settingsG" class="settings-content" style="display:none;">
+                <div class="input-group"><label for="commRateG">증권사 수수료율 (매수/매도 시, %)</label><input type="number" id="commRateG" value="0.10" step="0.01"><span> (기본: 0.10%)</span></div>
+                <div class="input-group"><label for="taxRateG">양도소득세율 (이익 발생 시, %)</label><input type="number" id="taxRateG" value="22.0" step="0.1"><span> (기본: 22.0% - 지방소득세 포함)</span></div>
+                <div class="input-group"><label for="taxBaseG">양도소득 기본공제 (원)</label><input type="number" id="taxBaseG" value="2500000" step="100000"><span> (기본: 250만 원)</span></div>
+            </div>
+
+            <button id="calculate" onclick="calculateProfit('global')">손익 계산하기</button>
+        </div>
+        
+        <div id="result" class="result">
+            <p>여기에 계산 결과가 표시됩니다.</p>
+        </div>
+    </div>
+
+    <script>
+        // 탭 전환 기능
+        function openTab(tabName) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const buttons = document.querySelectorAll('.tab-button');
+            const resultDiv = document.getElementById('result');
+
+            tabs.forEach(tab => tab.classList.remove('active'));
+            buttons.forEach(button => button.classList.remove('active'));
+
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`.tab-button[onclick="openTab('${tabName}')"]`).classList.add('active');
+            
+            // 탭 전환 시 결과 초기화
+            resultDiv.innerHTML = '<p>여기에 계산 결과가 표시됩니다.</p>';
+        }
+
+        // 수수료/세금 설정 영역 토글 기능
+        function toggleSettings(settingsId) {
+            const settingsDiv = document.getElementById(settingsId);
+            settingsDiv.style.display = settingsDiv.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 숫자 포맷 함수 (세 자리마다 콤마 추가)
+        function formatNumber(num) {
+            return num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        // 손익 계산 메인 함수
+        function calculateProfit(type) {
+            const resultDiv = document.getElementById('result');
+            let buyPrice, sellPrice, quantity;
+            let commRate, taxRate;
+            let currencyUnit, taxName;
+            let taxBase;
+
+            // 1. 입력 값 가져오기
+            if (type === 'domestic') {
+                buyPrice = parseFloat(document.getElementById('buyPriceD').value);
+                sellPrice = parseFloat(document.getElementById('sellPriceD').value);
+                quantity = parseInt(document.getElementById('quantityD').value);
+                commRate = parseFloat(document.getElementById('commRateD').value) / 100; // % -> 소수
+                taxRate = parseFloat(document.getElementById('taxRateD').value) / 100; // % -> 소수
+                currencyUnit = '원';
+                taxName = '거래세';
+            } else if (type === 'global') {
+                buyPrice = parseFloat(document.getElementById('buyPriceG').value);
+                sellPrice = parseFloat(document.getElementById('sellPriceG').value);
+                quantity = parseInt(document.getElementById('quantityG').value);
+                const exchangeRate = parseFloat(document.getElementById('exchangeRateG').value);
+                commRate = parseFloat(document.getElementById('commRateG').value) / 100; // % -> 소수
+                taxRate = parseFloat(document.getElementById('taxRateG').value) / 100; // % -> 소수 (양도소득세)
+                taxBase = parseInt(document.getElementById('taxBaseG').value); // 기본공제
+                currencyUnit = '원';
+                taxName = '양도소득세';
+
+                // 달러 금액을 원화로 환산 (계산을 원화 기준으로 진행)
+                if (exchangeRate) {
+                    buyPrice *= exchangeRate;
+                    sellPrice *= exchangeRate;
+                } else {
+                    alert('환율을 입력해 주세요.');
+                    return;
+                }
+            }
+
+            // 2. 입력 유효성 검사
+            if (isNaN(buyPrice) || isNaN(sellPrice) || isNaN(quantity) || quantity <= 0) {
+                resultDiv.innerHTML = '<p style="color:red;">⚠️ **매수/매도 가격 및 수량**을 정확히 입력해 주세요.</p>';
+                return;
+            }
+
+            // 3. 계산 로직
+            const totalBuy = buyPrice * quantity; // 총 매수 금액
+            const buyComm = totalBuy * commRate; // 매수 수수료
+            const totalSell = sellPrice * quantity; // 총 매도 금액
+            const sellComm = totalSell * commRate; // 매도 수수료
+
+            let profitLossBeforeTax = totalSell - totalBuy - buyComm - sellComm; // 세전 손익
+
+            let tax = 0;
+            let netProfitLoss = 0; // 최종 손익
+            let nTotalRate = 0; // 총 수익률
+
+            if (type === 'domestic') {
+                // 국내 주식: 거래세 (매도 금액 기준)
+                tax = totalSell * taxRate;
+                netProfitLoss = profitLossBeforeTax - tax;
+            } else if (type === 'global') {
+                // 해외 주식: 양도소득세 (이익 발생 시)
+                const capitalGain = totalSell - totalBuy; // 양도차익 (매매 차익)
+                
+                if (capitalGain > 0) {
+                    // 기본 공제 적용 후 과세 표준 계산
+                    let taxableIncome = capitalGain - taxBase;
+                    if (taxableIncome < 0) taxableIncome = 0; // 과세 표준은 0보다 작을 수 없음
+
+                    tax = taxableIncome * taxRate; // 양도소득세
+                    // 양도소득세는 양도차익이 발생했을 때만 부과됨
+                }
+                netProfitLoss = profitLossBeforeTax - tax;
+            }
+
+            nTotalRate = (netProfitLoss / totalBuy * 100).toFixed(3);
+
+            // 4. 결과 출력
+            const profitLossClass = netProfitLoss >= 0 ? 'profit' : 'loss';
+            const totalTax = type === 'domestic' ? tax : tax; // 국내:거래세, 해외:양도세
+            
+            let resultHTML = `
+                <h2>💰 계산 결과</h2>
+                <p>총 매수 금액 (수수료 포함): **${formatNumber(totalBuy + buyComm)} ${currencyUnit}**</p>
+                <p>총 매도 금액 (수수료 차감 전): **${formatNumber(totalSell)} ${currencyUnit}**</p>
+                <hr>
+                <p>매수 수수료 (${(commRate * 100).toFixed(3)}%): ${formatNumber(buyComm)} ${currencyUnit}</p>
+                <p>매도 수수료 (${(commRate * 100).toFixed(3)}%): ${formatNumber(sellComm)} ${currencyUnit}</p>
+                <p>${taxName} (${(taxRate * 100).toFixed(2)}%): ${formatNumber(totalTax)} ${currencyUnit}</p>
+                <hr>
+                <p>세전 손익: ${formatNumber(profitLossBeforeTax)} ${currencyUnit}</p>
+                <p><strong>최종 손익 (세후): <span class="${profitLossClass}">${formatNumber(netProfitLoss)} ${currencyUnit}</span></strong></p>
+                <p><strong>수익률: <span class="${profitLossClass}">${nTotalRate}${'%'}</span></strong></p>
+            `;
+            
+            if (type === 'global') {
+                resultHTML += `<p style="font-size:0.9em; margin-top:10px;">(참고: 해외 주식 양도소득세는 기본 공제 ${formatNumber(taxBase)}원 적용 후 계산됩니다.)</p>`;
+            }
+
+            resultDiv.innerHTML = resultHTML;
+        }
+
+        // 페이지 로드 시 국내 주식 탭이 보이도록 설정
+        document.addEventListener('DOMContentLoaded', () => {
+            openTab('domestic');
+        });
+    </script>
+</body>
+</html>
