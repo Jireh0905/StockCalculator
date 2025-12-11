@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주식 손익 계산기 - Jireh</title>
+    <title>주식 손익 계산기</title>
     <style>
         /* 기본 스타일 */
         body {
@@ -15,11 +15,12 @@
         }
         .calculator-container {
             max-width: 600px;
-            margin: auto;
+            margin: 30px auto;
             background: #fff;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            position: relative; /*아이콘의 기준점을 위해 추가*/
         }
 
         /* 탭 스타일 */
@@ -31,7 +32,7 @@
             padding: 15px 20px;
             cursor: pointer;
             border: none;
-            background: #eee;
+            background: #38383839;
             margin-right: 5px;
             border-top-left-radius: 5px;
             border-top-right-radius: 5px;
@@ -137,8 +138,83 @@
             margin-bottom: 12px;
         }
 
+        /* History 메뉴 컨테이너 및 아이콘 스타일 */
+        #history-menu-container {
+            position: absolute; /* fixed를 absolute로 변경하여 .calculator-container를 기준으로 삼습니다 */
+            top: 0;       /* .calculator-container의 상단에서 0px (패딩 고려) */
+            right: 0;     /* .calculator-container의 우측에서 0px (패딩 고려) */
+            z-index: 1000;   /* 다른 요소 위에 표시되도록 가장 높은 Z-index 설정 */
+        }
+        #history-icon {
+            /* 계산기 컨테이너의 상단 패딩(20px)과 우측 패딩(20px)을 고려하여 아이콘 위치를 맞춥니다. */
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            
+            padding: 10px 15px;
+            background-color: #787879;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        }
+        #history-icon:hover {
+            background-color: #a2a2a4;
+        }
+        /* 팝업 패널 스타일 (메뉴처럼 보이도록) */
+        #history-panel {
+            position: absolute; /* 아이콘 컨테이너 기준으로 위치 지정 */
+            top: 55px;          /* 아이콘 아래에 표시되도록 조정 */
+            right: 0;           /* 아이콘과 우측 정렬 */
+            width: 300px;       /* 메뉴 너비 지정 */
+            max-height: 400px;  /* 최대 높이 지정 */
+            overflow-y: auto;   /* 내용이 많으면 스크롤바 생성 */
+            
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            
+            /* 초기에는 숨기기 */
+            display: none; 
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            transform: translateY(-10px); /* 약간 위에서 나타나는 효과 */
+        }
+        /* 패널이 활성화될 때 (JavaScript에서 클래스 토글) */
+        #history-panel.visible {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 기타 내부 목록 스타일은 기존 것을 유지 */
+        #history-panel h3 {
+            margin-top: 0;
+            font-size: 1.1em;
+        }
+        #history-list {
+            list-style: none;
+            padding: 0;
+        }
+        #history-list li {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-bottom: 1px dashed #e0e0e0;
+            cursor: pointer; /* 클릭 가능하다는 표시 */
+            transition: background-color 0.2s;
+            font-size: 0.95em;
+        }
+        #history-list li:hover {
+            background-color: #e0f7fa; /* 마우스 오버 시 색상 변경 */
+        }
+
         /* 모바일 반응형 */
-        @media (max-width: 500px) {
+        @media (max-width: 600px) {
             body {
                 padding: 10px;
             }
@@ -149,12 +225,35 @@
                 flex-grow: 1;
                 text-align: center;
             }
+
+            /* 모바일 환경은 아이콘 그대로 유지 */
+            #history-icon {
+                top: 15px; /* 모바일 컨테이너 패딩(15px)에 맞춰 조정 */
+                right: 15px;
+            }
+            /* 모바일에서는 패널 너비를 화면에 맞게 조정 */
+            #history-panel {
+                width: 90vw; /* 화면 너비의 90% */
+                right: 5vw;  /* 우측에서 5% 떨어지게 하여 중앙에 가깝게 배치 */
+                top: 50px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="calculator-container">
-        <h1>📊 주식 손익 계산기 - Jireh</h1>
+        <h1>📊 주식 손익 계산기</h1>
+
+        <div id="history-menu-container">
+            <button id="history-icon" onclick="toggleHistoryPanel()">≣Jireh</button>
+
+            <div id="history-panel" class="hidden">
+                <h3>📊 계산 기록 (페이지 유지 시 저장)</h3>
+                <ul id="history-list">
+                    </ul>
+                <button onclick="clearHistory()" style="margin-top: 10px; padding: 5px 10px; cursor: pointer;">기록 지우기</button>
+            </div>
+        </div>
 
         <div class="tabs">
             <button class="tab-button active" onclick="openTab('domestic')">🇰🇷 국내 주식</button>
@@ -176,7 +275,7 @@
                 <div class="input-group"><label for="quantityD">수량 (주)</label><input type="text" id="quantityD" placeholder="예: 10" oninput="autoFormat(this)"></div>
             </div>
 
-            <button id="calculate" onclick="calculateProfit('domestic')">📱 손익 계산하기</button>
+            <button id="calculate" onclick="calculateProfit('domestic')">손익 계산하기</button>
         </div>
 
         <div id="global" class="tab-content">
@@ -196,15 +295,42 @@
                 <div class="input-group"><label for="quantityG">수량 (주)</label><input type="text" id="quantityG" placeholder="예: 10" oninput="autoFormat(this)"></div>
             </div>
 
-            <button id="calculate" onclick="calculateProfit('global')">📱 손익 계산하기</button>
+            <button id="calculate" onclick="calculateProfit('global')">손익 계산하기</button>
         </div>
-        
+
         <div id="result" class="result">
             <p>여기에 계산 결과가 표시됩니다.</p>
         </div>
+        
+        <div class="result-container">
+            <div id="result">
+                </div>
+
+            <div id="history-panel">
+                <h3>📊 계산 기록 (페이지 유지 시 저장)</h3>
+                <ul id="history-list">
+                    </ul>
+                <button onclick="clearHistory()" style="margin-top: 10px; padding: 5px 10px; cursor: pointer;">기록 지우기</button>
+            </div>
+        </div>
+        
     </div>
 
     <script>
+        // History 패널 토글 기능
+        function toggleHistoryPanel() {
+            const panel = document.getElementById('history-panel');
+            
+            // 현재 상태를 확인하여 클래스를 추가하거나 제거합니다.
+            if (panel.classList.contains('visible')) {
+                panel.classList.remove('visible');
+            } else {
+                panel.classList.add('visible');
+                // 패널이 열릴 때마다 최신 기록을 렌더링하도록 강제 호출 (선택 사항)
+                renderHistory(); 
+            }
+        }
+
         // 탭 전환 기능
         function openTab(tabName) {
             const tabs = document.querySelectorAll('.tab-content');
@@ -263,13 +389,119 @@
             return num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
 
+        // 페이지가 닫힐 때까지 계산 기록을 저장할 배열
+        let calculationHistory = [];
+
+        /**
+         * 계산 결과를 calculationHistory 배열에 저장하고 화면에 표시합니다.
+         * @param {string} type - 'domestic' 또는 'global'
+         * @param {object} data - 매수/매도 가격, 수량, 환율 등 입력된 데이터
+         * @param {string} resultText - 계산 결과 요약 텍스트
+         */
+        function saveHistory(type, data, resultText) {
+            const historyItem = {
+                type: type,
+                data: data,
+                summary: resultText.substring(0, 50) + '...', // 요약 텍스트
+                timestamp: new Date().toLocaleTimeString('ko-KR')
+            };
+
+            // 배열에 추가 (가장 최근 항목이 위로 오도록 prepend)
+            calculationHistory.unshift(historyItem);
+            
+            // 최대 10개까지만 저장 (선택 사항)
+            if (calculationHistory.length > 10) {
+                calculationHistory.pop();
+            }
+
+            renderHistory(); // 화면 업데이트
+        }
+
+        /**
+         * 저장된 계산 기록을 HTML 목록으로 표시합니다.
+         */
+        function renderHistory() {
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = ''; // 목록 초기화
+
+            calculationHistory.forEach((item, index) => {
+                const listItem = document.createElement('li');
+                
+                // 표시할 텍스트: [시간] [국내/해외] 요약
+                const typeText = item.type === 'domestic' ? '🇰🇷 국내' : '🌎 해외';
+                listItem.innerHTML = `[${item.timestamp}] ${typeText} | ${item.summary}`;
+                
+                // 클릭 시 불러오기 함수 연결
+                listItem.onclick = () => loadHistory(index);
+                
+                historyList.appendChild(listItem);
+            });
+        }
+
+        /**
+         * 특정 기록 항목을 입력 필드에 다시 불러옵니다.
+         * @param {number} index - calculationHistory 배열의 인덱스
+         */
+        function loadHistory(index) {
+            const item = calculationHistory[index];
+            if (!item) return;
+
+            // 1. 탭 전환
+            const targetTabId = item.type;
+            openTab(targetTabId);
+            
+            // 2. 입력 필드에 데이터 채우기
+            const data = item.data;
+            
+            // 쉼표 포맷을 적용하여 값 채우기
+            // autoFormat 함수가 이미 정의되어 있으므로, 이를 이용해 값을 채웁니다.
+            const fields = [
+                // 국내
+                { id: 'buyPriceD', value: data.buyPriceD },
+                { id: 'sellPriceD', value: data.sellPriceD },
+                { id: 'quantityD', value: data.quantityD },
+                // 국내 주식 설정 필드(수수료, 거래세)
+                { id: 'commRateD', value: data.commRateD },
+                { id: 'taxRateD', value: data.taxRateD },
+                // 해외
+                { id: 'buyPriceG', value: data.buyPriceG },
+                { id: 'sellPriceG', value: data.sellPriceG },
+                { id: 'quantityG', value: data.quantityG },
+                // 해외 주식 설정 필드(수수료, 양도세, 기본공제, 환율)
+                { id: 'commRateG', value: data.commRateG },
+                { id: 'taxRateG', value: data.taxRateG },
+                { id: 'taxBaseG', value: data.taxBaseG },
+                { id: 'exchangeRateG', value: data.exchangeRateG },
+            ];
+
+            fields.forEach(field => {
+                const inputElement = document.getElementById(field.id);
+                if (inputElement && field.value !== undefined) {
+                    // 값에 쉼표가 있었다면 포맷팅을 위해 autoFormat 함수를 수동 호출 (입력 필드에만 해당)
+                    inputElement.value = String(field.value); // 순수한 값 먼저 할당
+
+                    // 가격, 환율, 공제와 같이 쉼표가 필요한 필드에만 autoFormat 적용
+                    if (field.id.includes('Price') || field.id.includes('quantity') || field.id.includes('exchangeRate') || field.id.includes('taxBase')) {
+                        autoFormat(inputElement);
+                    }
+                }
+            });
+
+            calculateProfit(targetTabId, false); // 계산 결과 표시
+        }
+
+        /**
+         * 계산 기록을 완전히 지웁니다.
+         */
+        function clearHistory() {
+            calculationHistory = [];
+            renderHistory();
+        }
+
         // 손익 계산 메인 함수
-        function calculateProfit(type) {
+        function calculateProfit(type, isSaveHistory = true) {
             const resultDiv = document.getElementById('result');
-            let buyPrice, sellPrice, quantity;
-            let commRate, taxRate;
-            let currencyUnit, taxName;
-            let taxBase;
+            let buyPrice, sellPrice, quantity, commRate, taxRate, currencyUnit, taxName, taxBase, exchangeRate;
 
             // 1. 입력 값 가져오기
             if (type === 'domestic') {
@@ -284,7 +516,7 @@
                 buyPrice = parseFloat(document.getElementById('buyPriceG').value.replace(/,/g, ''));
                 sellPrice = parseFloat(document.getElementById('sellPriceG').value.replace(/,/g, ''));
                 quantity = parseInt(document.getElementById('quantityG').value.replace(/,/g, ''));
-                const exchangeRate = parseFloat(document.getElementById('exchangeRateG').value.replace(/,/g, ''));
+                exchangeRate = parseFloat(document.getElementById('exchangeRateG').value.replace(/,/g, ''));
                 commRate = parseFloat(document.getElementById('commRateG').value) / 100; // % -> 소수
                 taxRate = parseFloat(document.getElementById('taxRateG').value) / 100; // % -> 소수 (양도소득세)
                 taxBase = parseInt(document.getElementById('taxBaseG').value.replace(/,/g, '')); // 기본 공제
@@ -365,6 +597,36 @@
             }
 
             resultDiv.innerHTML = resultHTML;
+
+            // -------------------------------------------------------------
+            // [핵심 추가] 계산 기록 저장 전에 입력 데이터를 객체로 만듭니다.
+            if (isSaveHistory) {
+                const inputData = {
+                    buyPriceD: parseFloat(document.getElementById('buyPriceD').value.replace(/,/g, '')),    // 국내 매수 가격
+                    sellPriceD: parseFloat(document.getElementById('sellPriceD').value.replace(/,/g, '')),  // 국내 매도 가격
+                    quantityD: parseInt(document.getElementById('quantityD').value.replace(/,/g, '')),    // 국내 수량
+                    commRateD: parseFloat(document.getElementById('commRateD').value),  // 국내 수수료
+                    taxRateD: parseFloat(document.getElementById('taxRateD').value),    // 국내 세금
+                    
+                    buyPriceG: parseFloat(document.getElementById('buyPriceG').value.replace(/,/g, '')),    // 해외 매수 가격
+                    sellPriceG: parseFloat(document.getElementById('sellPriceG').value.replace(/,/g, '')),  // 해외 매도 가격
+                    quantityG: parseInt(document.getElementById('quantityG').value.replace(/,/g, '')),    // 해외 수량
+                    commRateG: parseFloat(document.getElementById('commRateG').value),  // 해외 수수료
+                    taxRateG: parseFloat(document.getElementById('taxRateG').value),    // 해외 세금
+                    taxBaseG: parseInt(document.getElementById('taxBaseG').value.replace(/,/g, '')),
+                    exchangeRateG: parseFloat(document.getElementById('exchangeRateG').value.replace(/,/g, '')), // 환율
+                };
+
+                // **[핵심 추가] 계산 결과를 저장**
+                const summaryText = `매수: ${formatNumber(buyPrice)}${currencyUnit} | 매도: ${formatNumber(sellPrice)}${currencyUnit} | 수량: ${formatNumber(quantity)}`;
+
+                // 최종적으로 결과 창에 HTML을 출력하는 코드입니다.
+                resultDiv.innerHTML = resultHTML; // (기존 코드)
+
+                // 계산 기록 저장 함수 호출 (최종 결과 텍스트를 인자로 넘김)
+                saveHistory(type, inputData, summaryText);
+            }
+            // -------------------------------------------------------------
         }
 
         // 페이지 로드 시 국내 주식 탭이 보이도록 설정
