@@ -261,13 +261,13 @@
             }
             /* 모바일에서는 패널 너비를 화면에 맞게 조정 */
             #history-panel {
-                width: 40vw; /* 화면 너비의 50% */
-                right: 1vw;  /* 우측에서 2% 떨어지게 하여 중앙에 가깝게 배치 */
-                top: 50px;
+                width: 50vw; /* 화면 너비의 50% */
+                right: 0vw;  /* 우측에서 0% 떨어지게 하여 중앙에 가깝게 배치 */
+                top: 45px;
                 max-height: 200px;  /* 최대 높이 지정 */
             }
             #history-list li {
-                font-size: 0.6em;
+                font-size: 7.5px;/*[Jireh] em으로는 왜인지 모르게 너무 작은 단위는 반영이 안 되는 듯해서 픽셀로 단위 변경. 0.4em;*/
             }
             #history-clear-button {
                 margin-top: 10px; padding: 2px 5px; cursor: pointer; font-size: 0.5em;
