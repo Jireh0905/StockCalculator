@@ -43,6 +43,7 @@
         .tab-button.active {
             background: #fff;
             border-bottom: 3px solid #007bff;
+            
             color: #007bff;
         }
         .tab-content {
@@ -86,7 +87,7 @@
         .settings-toggle {
             cursor: pointer;
             color: #007bff;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             display: inline-block;
             font-size: 1.1em;
         }
@@ -202,15 +203,18 @@
             padding: 0;
         }
         #history-list li {
-            padding: 8px;
+            padding: 1px;
             margin-bottom: 5px;
             border-bottom: 1px dashed #e0e0e0;
             cursor: pointer; /* 클릭 가능하다는 표시 */
             transition: background-color 0.2s;
-            font-size: 0.95em;
+            font-size: 0.75em;
         }
         #history-list li:hover {
             background-color: #e0f7fa; /* 마우스 오버 시 색상 변경 */
+        }
+        #history-clear-button {
+            margin-top: 10px; padding: 5px 10px; cursor: pointer; font-size: 0.9em;
         }
 
         /* 모바일 반응형 */
@@ -219,11 +223,35 @@
                 padding: 10px;
             }
             .calculator-container {
-                padding: 15px;
+                padding: 10px;
+                font-size: 0.6em;
             }
             .tab-button {
-                flex-grow: 1;
                 text-align: center;
+                padding: 8px 8px;
+                font-size: 1.1em;
+            }
+
+            .input-group {
+                margin-bottom: 8px;
+                font-size: 0.6em;
+            }
+            .input-group span {
+				margin-left: 10px;
+				font-size: 0.6em;
+				color: #666;
+			}
+            
+            .settings-toggle {
+                margin-bottom: 8px;
+                font-size: 1.0em;
+            }
+
+            button#calculate {
+                margin-top: 15px;
+                padding: 10px;
+                border-radius: 4px;
+                font-size: 1.4em;
             }
 
             /* 모바일 환경은 아이콘 그대로 유지 */
@@ -233,9 +261,16 @@
             }
             /* 모바일에서는 패널 너비를 화면에 맞게 조정 */
             #history-panel {
-                width: 90vw; /* 화면 너비의 90% */
-                right: 5vw;  /* 우측에서 5% 떨어지게 하여 중앙에 가깝게 배치 */
+                width: 40vw; /* 화면 너비의 50% */
+                right: 1vw;  /* 우측에서 2% 떨어지게 하여 중앙에 가깝게 배치 */
                 top: 50px;
+                max-height: 200px;  /* 최대 높이 지정 */
+            }
+            #history-list li {
+                font-size: 0.6em;
+            }
+            #history-clear-button {
+                margin-top: 10px; padding: 2px 5px; cursor: pointer; font-size: 0.5em;
             }
         }
     </style>
@@ -248,10 +283,10 @@
             <button id="history-icon" onclick="toggleHistoryPanel()">≣Jireh</button>
 
             <div id="history-panel" class="hidden">
-                <h3>📊 계산 기록 (페이지 유지 시 저장)</h3>
+                <h3>📊 계산 기록</h3>
                 <ul id="history-list">
                     </ul>
-                <button onclick="clearHistory()" style="margin-top: 10px; padding: 5px 10px; cursor: pointer;">기록 지우기</button>
+                <button id="history-clear-button" onclick="clearHistory()">기록 지우기</button>
             </div>
         </div>
 
@@ -305,13 +340,6 @@
         <div class="result-container">
             <div id="result">
                 </div>
-
-            <div id="history-panel">
-                <h3>📊 계산 기록 (페이지 유지 시 저장)</h3>
-                <ul id="history-list">
-                    </ul>
-                <button onclick="clearHistory()" style="margin-top: 10px; padding: 5px 10px; cursor: pointer;">기록 지우기</button>
-            </div>
         </div>
         
     </div>
@@ -399,20 +427,23 @@
          * @param {string} resultText - 계산 결과 요약 텍스트
          */
         function saveHistory(type, data, resultText) {
+            var timeOption = { hour: "numeric", minute: "numeric", second: "numeric", hour12: false };
             const historyItem = {
                 type: type,
                 data: data,
-                summary: resultText.substring(0, 50) + '...', // 요약 텍스트
-                timestamp: new Date().toLocaleTimeString('ko-KR')
+                summary: resultText.substring(0, 50), // + '...' 요약 텍스트
+                timestamp: new Date().toLocaleTimeString('en-US', timeOption)
             };
 
             // 배열에 추가 (가장 최근 항목이 위로 오도록 prepend)
             calculationHistory.unshift(historyItem);
             
+            /*
             // 최대 10개까지만 저장 (선택 사항)
             if (calculationHistory.length > 10) {
                 calculationHistory.pop();
             }
+            */
 
             renderHistory(); // 화면 업데이트
         }
@@ -428,7 +459,7 @@
                 const listItem = document.createElement('li');
                 
                 // 표시할 텍스트: [시간] [국내/해외] 요약
-                const typeText = item.type === 'domestic' ? '🇰🇷 국내' : '🌎 해외';
+                const typeText = item.type === 'domestic' ? '🇰🇷국내' : '🌎해외';
                 listItem.innerHTML = `[${item.timestamp}] ${typeText} | ${item.summary}`;
                 
                 // 클릭 시 불러오기 함수 연결
@@ -578,18 +609,18 @@
             
             let resultHTML = `
                 <h2>💰 계산 결과</h2>
-                <p>매수 금액 (원금): ${formatNumber(totalBuy)} ${currencyUnit}</p>
+                <p>매수 원금: ${formatNumber(totalBuy)} ${currencyUnit}</p>
                 <p>매수 수수료 (${(commRate * 100).toFixed(3)}%): ${formatNumber(buyComm)} ${currencyUnit}</p>
-                <p>총 매수 금액 (수수료 포함): ${formatNumber(totalBuy + buyComm)} ${currencyUnit}</p>
+                <p>총 매수 금액: ${formatNumber(totalBuy + buyComm)} ${currencyUnit}</p>
                 <hr>
-                <p>매도 금액 (수수료 및 세금 차감 전): ${formatNumber(totalSell)} ${currencyUnit}</p>
+                <p>매도 원금: ${formatNumber(totalSell)} ${currencyUnit}</p>
                 <p>매도 수수료 (${(commRate * 100).toFixed(3)}%): ${formatNumber(sellComm)} ${currencyUnit}</p>
                 <p>${taxName} (${(taxRate * 100).toFixed(2)}%): ${formatNumber(totalTax)} ${currencyUnit}</p>
-                <p>총 매도 금액 (수수료 및 세금 차감 후): ${formatNumber(totalSell - sellComm - totalTax)} ${currencyUnit}</p>
+                <p>총 매도 금액: ${formatNumber(totalSell - sellComm - totalTax)} ${currencyUnit}</p>
                 <hr>
                 <p>세전 손익: ${formatNumber(profitLossBeforeTax)} ${currencyUnit}</p>
-                <p><strong>최종 손익 (세후): <span class="${profitLossClass}">${formatNumber(netProfitLoss)} ${currencyUnit}</span></strong></p>
-                <p><strong>수익률: <span class="${profitLossClass}">${nTotalRate}${'%'}</span></strong></p>
+                <p><strong>총 손익: <span class="${profitLossClass}">${formatNumber(netProfitLoss)} ${currencyUnit}</span></strong></p>
+                <p><strong>총 수익률: <span class="${profitLossClass}">${nTotalRate}${'%'}</span></strong></p>
             `;
             
             if (type === 'global') {
@@ -618,7 +649,7 @@
                 };
 
                 // **[핵심 추가] 계산 결과를 저장**
-                const summaryText = `매수: ${formatNumber(buyPrice)}${currencyUnit} | 매도: ${formatNumber(sellPrice)}${currencyUnit} | 수량: ${formatNumber(quantity)}`;
+                const summaryText = `매수: ${formatNumber(buyPrice)}${currencyUnit} | 수량: ${formatNumber(quantity)}`;
 
                 // 최종적으로 결과 창에 HTML을 출력하는 코드입니다.
                 resultDiv.innerHTML = resultHTML; // (기존 코드)
