@@ -3,774 +3,939 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f1f3f5" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#101214" media="(prefers-color-scheme: dark)">
     <title>주식 손익 계산기</title>
+    <!-- 한글 웹폰트 Pretendard (무료 오픈소스 폰트). 불러오지 못하면 기기 기본 글꼴로 표시됨 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
     <style>
-        /*
-         * [글자 크기 단위 메모]
-         * em  : 부모 요소의 글자 크기 기준 → 안쪽으로 들어갈수록 곱해져서 계속 작아짐
-         *       (예: 0.6em 안의 0.6em = 0.36배)
-         * rem : 최상위(html) 글자 크기(보통 16px) 기준 → 어디에 있든 항상 같은 크기
-         * 그래서 글자 크기는 모두 rem으로 지정함.
-         */
+        /* =========================================================
+         * 디자인 토큰 (색상·모서리 등 공통 값을 변수로 모아둠)
+         * → 색을 바꾸고 싶으면 여기만 고치면 전체에 반영됨
+         * ========================================================= */
+        :root {
+            --bg: #f1f3f5;          /* 페이지 배경 */
+            --surface: #ffffff;     /* 카드 배경 */
+            --surface-2: #f8f9fa;   /* 입력칸 배경 */
+            --text: #212529;        /* 본문 글자 */
+            --text-2: #495057;      /* 보조 글자 */
+            --text-3: #868e96;      /* 흐린 글자(단위, 안내) */
+            --border: #e9ecef;
+            --primary: #4c6ef5;     /* 강조색(선택된 탭, 포커스) */
+            --primary-weak: #edf2ff;
+            /* 한국 증시 관례: 상승·이익 = 빨강, 하락·손실 = 파랑 */
+            --up: #e03131;
+            --up-weak: #fff5f5;
+            --down: #1c7ed6;
+            --down-weak: #e7f5ff;
+            --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+            --radius: 16px;
+            --radius-sm: 12px;
+        }
+        /* 다크 모드: 휴대폰이 다크 모드면 자동으로 어두운 색으로 바뀜 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #101214;
+                --surface: #1a1d21;
+                --surface-2: #22262b;
+                --text: #f1f3f5;
+                --text-2: #ced4da;
+                --text-3: #868e96;
+                --border: #2c3036;
+                --primary: #748ffc;
+                --primary-weak: #23284a;
+                --up: #ff6b6b;
+                --up-weak: #3a1e21;
+                --down: #4dabf7;
+                --down-weak: #172c3d;
+                --shadow: none;
+            }
+        }
 
-        /* 기본 스타일 */
+        * { box-sizing: border-box; }
         body {
-            font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
-            background-color: #f4f4f9;
-            color: #333;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui,
+                         'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
         }
-        .calculator-container {
-            max-width: 600px;
-            margin: 30px auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            position: relative; /*아이콘의 기준점을 위해 추가*/
+        button { font: inherit; color: inherit; }
+
+        .app {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 16px 16px 48px;
         }
 
-        /* 탭 스타일 */
-        .tabs {
+        /* ---------- 상단 헤더 ---------- */
+        .app-header {
             display: flex;
-            border-bottom: 2px solid #ddd;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 4px 16px;
         }
-        .tab-button {
-            padding: 15px 20px;
+        .app-header h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        .history-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 36px;
+            padding: 0 12px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: var(--surface);
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-2);
             cursor: pointer;
-            border: none;
-            background: #38383839;
-            margin-right: 5px;
-            border-top-left-radius: 5px;
-            border-top-right-radius: 5px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            transition: background 0.3s;
         }
-        .tab-button.active {
-            background: #fff;
-            border-bottom: 3px solid #007bff;
-            
-            color: #007bff;
+        .history-btn .badge {
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: var(--primary);
+            color: #fff;
+            font-size: 0.75rem;
+            line-height: 20px;
+            text-align: center;
         }
-        .tab-content {
-            display: none;
-            padding: 10px 0;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        .tab-content.active p:first-child {
-            margin-bottom: 5px;
-        }
+        .history-btn .badge:empty { display: none; }
 
-        /* 폼 및 입력 스타일 */
-        .input-group {
-            margin-bottom: 20px;
+        /* ---------- 국내/해외 전환 (세그먼트 버튼) ---------- */
+        .segmented {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            padding: 4px;
+            margin-bottom: 12px;
+            border-radius: var(--radius-sm);
+            background: var(--border);
         }
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .input-group input[type="number"],
-        .input-group input[type="text"] {
-            width: calc(100% - 22px);
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-
-            font-size: 1rem;
-            color: #333;
-        }
-        .input-group span {
-            margin-left: 5px;
-            font-size: 0.9rem;
-            color: #666;
-        }
-
-        /* 설정 영역 스타일 */
-        .settings-toggle {
+        .segmented button {
+            height: 40px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: var(--text-3);
             cursor: pointer;
-            color: #007bff;
-            margin-bottom: 15px;
-            display: inline-block;
-            font-size: 1.1rem;
+            transition: background .2s, color .2s;
         }
-        .settings-content {
-            border: 1px solid #eee;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            background-color: #f9f9f9;
+        .segmented button[aria-selected="true"] {
+            background: var(--surface);
+            color: var(--text);
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
         }
 
-        /* 버튼 및 결과 스타일 */
-        .calculate-btn {
-            width: 100%;
-            margin-top: 30px;
+        /* ---------- 카드 ---------- */
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
             padding: 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .calculate-btn:hover {
-            background-color: #0056b3;
-        }
-        .result {
-            margin-top: 10px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: #e9ecef;
-            font-size: 1.1rem;
-        }
-        .result .note {
-            font-size: 0.85rem;
-            color: #555;
-            margin-top: 10px;
-        }
-        .result p {
-            margin: 5px 0;
-        }
-        .profit {
-            color: green;
-            font-weight: bold;
-        }
-        .loss {
-            color: red;
-            font-weight: bold;
-        }
-        .result h2 {
-            margin-top: 0px;
             margin-bottom: 12px;
         }
+        .panel[hidden] { display: none; }
 
-        /* History 메뉴 컨테이너 및 아이콘 스타일 */
-        #history-menu-container {
-            position: absolute; /* fixed를 absolute로 변경하여 .calculator-container를 기준으로 삼습니다 */
-            top: 0;       /* .calculator-container의 상단에서 0px (패딩 고려) */
-            right: 0;     /* .calculator-container의 우측에서 0px (패딩 고려) */
-            z-index: 1000;   /* 다른 요소 위에 표시되도록 가장 높은 Z-index 설정 */
+        /* ---------- 입력칸 ---------- */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
-        #history-icon {
-            /* 계산기 컨테이너의 상단 패딩(20px)과 우측 패딩(20px)을 고려하여 아이콘 위치를 맞춥니다. */
+        .field { display: block; margin-bottom: 14px; }
+        .field-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--text-2);
+        }
+        .input-wrap { position: relative; }
+        .input-wrap input {
+            width: 100%;
+            height: 52px;
+            padding: 0 40px 0 14px;
+            border: 1.5px solid transparent;
+            border-radius: var(--radius-sm);
+            background: var(--surface-2);
+            color: var(--text);
+            font: inherit;
+            font-size: 1.125rem;          /* 16px 이상 → 아이폰에서 입력 시 화면 확대 안 됨 */
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            outline: none;
+            transition: border-color .15s, background .15s;
+        }
+        .input-wrap input::placeholder { color: var(--text-3); font-weight: 400; }
+        .input-wrap input:focus {
+            border-color: var(--primary);
+            background: var(--surface);
+        }
+        .input-wrap .unit {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            
-            padding: 10px 15px;
-            background-color: #787879;
-            color: white;
-            border: none;
-            border-radius: 5px;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-3);
+            font-size: 0.9375rem;
+            pointer-events: none;
+        }
+        .input-wrap.prefix input { padding-left: 30px; }
+        .input-wrap .prefix-unit {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-3);
+            font-weight: 600;
+            pointer-events: none;
+        }
+
+        /* ---------- 수수료/세금 설정 (접고 펼치기) ---------- */
+        .settings {
+            border-top: 1px solid var(--border);
+            margin: 4px -20px -20px;
+            padding: 0 20px;
+        }
+        .settings summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 16px 0;
             cursor: pointer;
-            font-size: 1rem;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.3s;
-        }
-        #history-icon:hover {
-            background-color: #a2a2a4;
-        }
-        /* 팝업 패널 스타일 (메뉴처럼 보이도록) */
-        #history-panel {
-            position: absolute; /* 아이콘 컨테이너 기준으로 위치 지정 */
-            top: 55px;          /* 아이콘 아래에 표시되도록 조정 */
-            right: 0;           /* 아이콘과 우측 정렬 */
-            width: 300px;       /* 메뉴 너비 지정 */
-            max-height: 400px;  /* 최대 높이 지정 */
-            overflow-y: auto;   /* 내용이 많으면 스크롤바 생성 */
-            
-            background: #fff;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            
-            /* 초기에는 숨기기
-             * [수정] display: none ↔ block 전환에는 transition(애니메이션)이 적용되지 않음.
-             * 그래서 visibility(보이기/숨기기)와 opacity(투명도)로 숨겨서 애니메이션이 보이게 함. */
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
-            transform: translateY(-10px); /* 약간 위에서 나타나는 효과 */
-        }
-        /* 패널이 활성화될 때 (JavaScript에서 클래스 토글) */
-        #history-panel.visible {
-            visibility: visible;
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* 기타 내부 목록 스타일은 기존 것을 유지 */
-        #history-panel h3 {
-            margin-top: 0;
-            font-size: 1.1rem;
-        }
-        #history-list {
             list-style: none;
-            padding: 0;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-2);
         }
-        #history-list li {
-            padding: 1px;
-            margin-bottom: 5px;
-            border-bottom: 1px dashed #e0e0e0;
-            cursor: pointer; /* 클릭 가능하다는 표시 */
-            transition: background-color 0.2s;
+        .settings summary::-webkit-details-marker { display: none; }
+        .settings summary .chip {
+            margin-left: auto;
+            font-weight: 400;
+            color: var(--text-3);
+            font-size: 0.8125rem;
+            text-align: right;
+        }
+        .settings summary::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-right: 2px solid var(--text-3);
+            border-bottom: 2px solid var(--text-3);
+            transform: rotate(45deg) translateY(-3px);
+            transition: transform .2s;
+            flex-shrink: 0;
+        }
+        .settings[open] summary::after { transform: rotate(-135deg) translateY(-3px); }
+        .settings .settings-body { padding-bottom: 6px; }
+        .settings .input-wrap input { height: 44px; font-size: 1rem; }
+        .hint {
+            display: block;
+            margin-top: 4px;
             font-size: 0.75rem;
-        }
-        #history-list li:hover {
-            background-color: #e0f7fa; /* 마우스 오버 시 색상 변경 */
-        }
-        #history-clear-button {
-            margin-top: 10px; padding: 5px 10px; cursor: pointer; font-size: 0.9rem;
+            color: var(--text-3);
         }
 
-        /* 모바일 반응형 */
-        @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
-            /* [수정] 예전에는 컨테이너 0.6em × 입력 그룹 0.6em이 곱해져서
-             * 라벨·입력칸 글자가 약 6px까지 작아졌음 → rem으로 크기를 직접 지정 */
-            .calculator-container {
-                padding: 10px;
-                font-size: 0.9rem;
-            }
-            .calculator-container h1 {
-                font-size: 1.3rem;
-                padding-right: 80px; /* 오른쪽 위 기록 버튼과 겹치지 않도록 */
-            }
-            .tab-button {
-                text-align: center;
-                padding: 8px 10px;
-                font-size: 0.95rem;
-            }
+        /* ---------- 결과 카드 ---------- */
+        .result-card { padding: 24px 20px 20px; }
+        .result-empty {
+            text-align: center;
+            color: var(--text-3);
+            font-size: 0.9375rem;
+            padding: 20px 0 16px;
+            line-height: 1.6;
+        }
+        .result-empty .icon { font-size: 2rem; display: block; margin-bottom: 4px; }
+        .result-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-2);
+        }
+        .result-amount {
+            margin: 4px 0 8px;
+            font-size: 2.125rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            font-variant-numeric: tabular-nums;
+            word-break: keep-all;
+        }
+        .result-amount small { font-size: 1.25rem; font-weight: 700; margin-left: 2px; }
+        .rate-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .is-up   .result-amount { color: var(--up); }
+        .is-down .result-amount { color: var(--down); }
+        .is-up   .rate-pill { color: var(--up);   background: var(--up-weak); }
+        .is-down .rate-pill { color: var(--down); background: var(--down-weak); }
+        .is-flat .rate-pill { color: var(--text-2); background: var(--surface-2); }
 
-            .input-group {
-                margin-bottom: 10px;
-            }
-            .input-group label {
-                font-size: 0.85rem;
-            }
-            /* 입력칸은 16px(1rem) 이상이어야 아이폰에서 입력할 때 화면이 자동 확대되지 않음 */
-            .input-group input[type="number"],
-            .input-group input[type="text"] {
-                padding: 8px;
-                font-size: 1rem;
-            }
-            .input-group span {
-				display: block;   /* 좁은 화면에서는 안내 문구를 입력칸 아래 줄에 표시 */
-				margin-top: 3px;
-				margin-left: 0;
-				font-size: 0.75rem;
-				color: #666;
-			}
+        .rows { margin: 20px 0 0; padding: 0; list-style: none; }
+        .rows li {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 7px 0;
+            font-size: 0.9375rem;
+            color: var(--text-2);
+        }
+        .rows li span:last-child {
+            color: var(--text);
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+        }
+        .rows li.sub { font-size: 0.8125rem; color: var(--text-3); padding: 3px 0 3px 12px; }
+        .rows li.sub span:last-child { color: var(--text-2); font-weight: 500; }
+        .rows li.divider { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 12px; }
 
-            .settings-toggle {
-                margin-bottom: 8px;
-                font-size: 0.95rem;
-            }
+        .breakdown { margin-top: 8px; }
+        .breakdown summary {
+            padding: 10px 0;
+            cursor: pointer;
+            font-size: 0.8125rem;
+            color: var(--text-3);
+            list-style: none;
+            text-align: center;
+        }
+        .breakdown summary::-webkit-details-marker { display: none; }
+        .breakdown summary::after { content: ' ▾'; }
+        .breakdown[open] summary::after { content: ' ▴'; }
+        .breakdown .rows { margin-top: 0; }
+        .note {
+            margin: 8px 0 0;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: var(--surface-2);
+            font-size: 0.75rem;
+            line-height: 1.5;
+            color: var(--text-3);
+        }
 
-            .calculate-btn {
-                margin-top: 15px;
-                padding: 12px;
-                border-radius: 4px;
-                font-size: 1.15rem;
-            }
+        .save-btn {
+            width: 100%;
+            height: 48px;
+            margin-top: 16px;
+            border: 0;
+            border-radius: var(--radius-sm);
+            background: var(--primary-weak);
+            color: var(--primary);
+            font-size: 0.9375rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .save-btn:active { transform: scale(.99); }
 
-            .result {
-                padding: 10px;
-                font-size: 0.9rem;
-            }
-            .result h2 {
-                font-size: 1.15rem;
-            }
+        /* ---------- 계산 기록 (아래에서 올라오는 시트) ---------- */
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.4);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity .25s, visibility .25s;
+            z-index: 10;
+        }
+        .sheet {
+            position: fixed;
+            left: 50%;
+            bottom: 0;
+            width: 100%;
+            max-width: 480px;
+            max-height: 75vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--surface);
+            border-radius: 20px 20px 0 0;
+            transform: translate(-50%, 100%);
+            visibility: hidden;
+            transition: transform .3s cubic-bezier(.2,.8,.2,1), visibility .3s;
+            z-index: 11;
+        }
+        body.sheet-open .backdrop { opacity: 1; visibility: visible; }
+        body.sheet-open .sheet { transform: translate(-50%, 0); visibility: visible; }
+        .sheet-handle {
+            width: 36px; height: 4px;
+            margin: 10px auto 0;
+            border-radius: 2px;
+            background: var(--border);
+        }
+        .sheet-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px 8px;
+        }
+        .sheet-header h2 { margin: 0 auto 0 0; font-size: 1.125rem; }
+        .text-btn {
+            border: 0;
+            background: none;
+            color: var(--text-3);
+            font-size: 0.8125rem;
+            cursor: pointer;
+            padding: 6px;
+        }
+        .history-list {
+            list-style: none;
+            margin: 0;
+            padding: 0 12px 24px;
+            overflow-y: auto;
+        }
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            border-radius: 10px;
+        }
+        .history-item:hover { background: var(--surface-2); }
+        .history-item .meta { font-size: 0.75rem; color: var(--text-3); margin-bottom: 2px; }
+        .history-item .main { font-size: 0.875rem; font-weight: 600; }
+        .history-item .info { flex: 1; min-width: 0; }
+        .history-item .pl {
+            font-size: 0.875rem;
+            font-weight: 700;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .history-item .pl.up { color: var(--up); }
+        .history-item .pl.down { color: var(--down); }
+        .history-item .del {
+            border: 0; background: none; color: var(--text-3);
+            font-size: 1rem; cursor: pointer; padding: 4px 6px;
+        }
+        .history-empty {
+            padding: 32px 20px 40px;
+            text-align: center;
+            color: var(--text-3);
+            font-size: 0.9375rem;
+        }
 
-            /* 모바일 환경은 아이콘 그대로 유지 */
-            #history-icon {
-                top: 15px; /* 모바일 컨테이너 패딩(15px)에 맞춰 조정 */
-                right: 15px;
-                padding: 8px 12px;
-                font-size: 0.85rem;
+        /* ---------- 하단 알림 (토스트) ---------- */
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 24px;
+            transform: translate(-50%, 20px);
+            padding: 10px 16px;
+            border-radius: 999px;
+            background: #212529;
+            color: #fff;
+            font-size: 0.875rem;
+            opacity: 0;
+            transition: opacity .2s, transform .2s;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+        /* ---------- 키보드로 이동할 때만 포커스 테두리 표시 ---------- */
+        button:focus-visible, summary:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+
+        /* ---------- PC 화면: 입력(왼쪽) + 결과(오른쪽) 2단 배치 ---------- */
+        @media (min-width: 880px) {
+            .app { max-width: 920px; padding-top: 32px; }
+            .layout {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                align-items: start;
             }
-            /* 모바일에서는 패널 너비를 화면에 맞게 조정 */
-            #history-panel {
-                width: 80vw;        /* 화면 너비의 80% */
-                max-width: 320px;
-                right: 10px;
-                top: 55px;
-                max-height: 300px;  /* 최대 높이 지정 */
-                padding: 10px;
-            }
-            #history-panel h3 {
-                font-size: 1rem;
-            }
-            #history-list li {
-                /* [Jireh] em으로 아주 작게 하면 반영이 안 되는 듯해서 7.5px로 썼었음.
-                 * → 원인: em이 부모 크기에 곱해져서 0.6 × 0.4 = 0.24배(약 3.8px)가 되었기 때문.
-                 *   브라우저의 최소 글자 크기보다 작아서 무시된 것. rem으로 바꿔서 해결. */
-                font-size: 0.75rem;
-                padding: 4px 2px;
-            }
-            #history-clear-button {
-                margin-top: 10px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem;
-            }
+            .result-col { position: sticky; top: 20px; }
         }
     </style>
 </head>
 <body>
-    <div class="calculator-container">
-        <h1>📊 주식 손익 계산기</h1>
+    <div class="app">
+        <header class="app-header">
+            <h1>주식 손익 계산기</h1>
+            <button class="history-btn" id="historyBtn" type="button" aria-haspopup="dialog">
+                계산 기록 <span class="badge" id="historyCount"></span>
+            </button>
+        </header>
 
-        <div id="history-menu-container">
-            <button id="history-icon" onclick="toggleHistoryPanel()">≣Jireh</button>
+        <div class="layout">
+            <!-- ===== 입력 영역 ===== -->
+            <div class="input-col">
+                <div class="segmented" role="tablist" aria-label="주식 종류">
+                    <button type="button" role="tab" id="tab-domestic" aria-controls="panel-domestic" aria-selected="true" data-tab="domestic">국내 주식</button>
+                    <button type="button" role="tab" id="tab-global" aria-controls="panel-global" aria-selected="false" data-tab="global">해외 주식</button>
+                </div>
 
-            <div id="history-panel">
-                <h3>📊 계산 기록</h3>
-                <ul id="history-list">
-                    </ul>
-                <button id="history-clear-button" onclick="clearHistory()">기록 지우기</button>
+                <!-- 국내 -->
+                <section class="card panel" id="panel-domestic" role="tabpanel" aria-labelledby="tab-domestic" data-type="domestic">
+                    <div class="grid-2">
+                        <label class="field">
+                            <span class="field-label">매수가</span>
+                            <span class="input-wrap"><input id="buyPriceD" inputmode="decimal" placeholder="10,000" autocomplete="off"><span class="unit">원</span></span>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">매도가</span>
+                            <span class="input-wrap"><input id="sellPriceD" inputmode="decimal" placeholder="11,000" autocomplete="off"><span class="unit">원</span></span>
+                        </label>
+                    </div>
+                    <label class="field">
+                        <span class="field-label">수량</span>
+                        <span class="input-wrap"><input id="quantityD" inputmode="numeric" data-int placeholder="10" autocomplete="off"><span class="unit">주</span></span>
+                    </label>
+
+                    <details class="settings">
+                        <summary>수수료·세금 <span class="chip" id="chipD"></span></summary>
+                        <div class="settings-body grid-2">
+                            <label class="field">
+                                <span class="field-label">증권사 수수료</span>
+                                <span class="input-wrap"><input id="commRateD" inputmode="decimal" value="0.015"><span class="unit">%</span></span>
+                                <span class="hint">매수·매도 각각</span>
+                            </label>
+                            <label class="field">
+                                <span class="field-label">거래세</span>
+                                <span class="input-wrap"><input id="taxRateD" inputmode="decimal" value="0.20"><span class="unit">%</span></span>
+                                <span class="hint">매도할 때만</span>
+                            </label>
+                        </div>
+                    </details>
+                </section>
+
+                <!-- 해외 -->
+                <section class="card panel" id="panel-global" role="tabpanel" aria-labelledby="tab-global" data-type="global" hidden>
+                    <div class="grid-2">
+                        <label class="field">
+                            <span class="field-label">매수가</span>
+                            <span class="input-wrap prefix"><span class="prefix-unit">$</span><input id="buyPriceG" inputmode="decimal" placeholder="100" autocomplete="off"></span>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">매도가</span>
+                            <span class="input-wrap prefix"><span class="prefix-unit">$</span><input id="sellPriceG" inputmode="decimal" placeholder="110" autocomplete="off"></span>
+                        </label>
+                    </div>
+                    <label class="field">
+                        <span class="field-label">수량</span>
+                        <span class="input-wrap"><input id="quantityG" inputmode="numeric" data-int placeholder="10" autocomplete="off"><span class="unit">주</span></span>
+                    </label>
+                    <div class="grid-2">
+                        <label class="field">
+                            <span class="field-label">매수 시 환율</span>
+                            <span class="input-wrap"><input id="exchangeRateBuyG" inputmode="decimal" placeholder="매도와 동일" autocomplete="off"><span class="unit">원</span></span>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">매도 시 환율</span>
+                            <span class="input-wrap"><input id="exchangeRateG" inputmode="decimal" value="1,300" autocomplete="off"><span class="unit">원</span></span>
+                        </label>
+                    </div>
+
+                    <details class="settings">
+                        <summary>수수료·세금 <span class="chip" id="chipG"></span></summary>
+                        <div class="settings-body">
+                            <div class="grid-2">
+                                <label class="field">
+                                    <span class="field-label">증권사 수수료</span>
+                                    <span class="input-wrap"><input id="commRateG" inputmode="decimal" value="0.10"><span class="unit">%</span></span>
+                                    <span class="hint">매수·매도 각각</span>
+                                </label>
+                                <label class="field">
+                                    <span class="field-label">양도소득세</span>
+                                    <span class="input-wrap"><input id="taxRateG" inputmode="decimal" value="22.0"><span class="unit">%</span></span>
+                                    <span class="hint">지방소득세 포함</span>
+                                </label>
+                            </div>
+                            <label class="field">
+                                <span class="field-label">양도소득세 기본 공제</span>
+                                <span class="input-wrap"><input id="taxBaseG" inputmode="numeric" data-int value="2,500,000"><span class="unit">원</span></span>
+                                <span class="hint">1년에 한 번 적용돼요</span>
+                            </label>
+                        </div>
+                    </details>
+                </section>
+            </div>
+
+            <!-- ===== 결과 영역 ===== -->
+            <div class="result-col">
+                <section class="card result-card" id="result" aria-live="polite"></section>
             </div>
         </div>
-
-        <div class="tabs">
-            <button class="tab-button active" onclick="openTab('domestic')">🇰🇷 국내 주식</button>
-            <button class="tab-button" onclick="openTab('global')">🌎 해외 주식</button>
-        </div>
-
-        <div id="domestic" class="tab-content active">
-            <p><strong>국내 주식</strong>은 거래세와 증권사 수수료가 적용됩니다.</p>
-
-            <div class="settings-toggle" onclick="toggleSettings('settingsD')">⚙️ 수수료/세금 설정</div>
-            <div id="settingsD" class="settings-content" style="display:none;">
-                <div class="input-group"><label for="commRateD">증권사 수수료율 (매수/매도 시, %)</label><input type="number" id="commRateD" value="0.015" step="0.001"><span> (기본: 0.015%)</span></div>
-                <div class="input-group"><label for="taxRateD">거래세율 (매도 시, %)</label><input type="number" id="taxRateD" value="0.20" step="0.01"><span> (기본: 0.20%)</span></div>
-            </div>
-
-            <div class="input-form">
-                <div class="input-group"><label for="buyPriceD">매수 가격 (원)</label><input type="text" inputmode="decimal" id="buyPriceD" placeholder="예: 10,000" oninput="autoFormat(this)"></div>
-                <div class="input-group"><label for="sellPriceD">매도 가격 (원)</label><input type="text" inputmode="decimal" id="sellPriceD" placeholder="예: 11,000" oninput="autoFormat(this)"></div>
-                <div class="input-group"><label for="quantityD">수량 (주)</label><input type="text" inputmode="numeric" id="quantityD" placeholder="예: 10" oninput="autoFormat(this)"></div>
-            </div>
-
-            <!-- [수정] id는 페이지에서 하나만 쓸 수 있어서, 두 탭의 계산 버튼은 class로 스타일을 공유 -->
-            <button class="calculate-btn" onclick="calculateProfit('domestic')">손익 계산하기</button>
-        </div>
-
-        <div id="global" class="tab-content">
-            <p><strong>해외 주식</strong>은 양도소득세와 증권사 수수료가 적용됩니다.</p>
-
-            <div class="settings-toggle" onclick="toggleSettings('settingsG')">⚙️ 수수료/세금/환율 설정</div>
-            <div id="settingsG" class="settings-content" style="display:none;">
-                <div class="input-group"><label for="commRateG">증권사 수수료율 (매수/매도 시, %)</label><input type="number" id="commRateG" value="0.10" step="0.01"><span> (기본: 0.10%)</span></div>
-                <div class="input-group"><label for="taxRateG">양도소득세율 (이익 발생 시, %)</label><input type="number" id="taxRateG" value="22.0" step="0.1"><span> (기본: 22.0% - 지방소득세 포함)</span></div>
-                <div class="input-group"><label for="taxBaseG">양도소득세 기본 공제 (원)</label><input type="text" inputmode="numeric" id="taxBaseG" value="2,500,000" oninput="autoFormat(this)"><span> (기본: 250만 원, 1년에 한 번 적용)</span></div>
-                <div class="input-group"><label for="exchangeRateG">매도 시 환율 (원/USD)</label><input type="text" inputmode="decimal" id="exchangeRateG" placeholder="예: 1,300" value="1,300" oninput="autoFormat(this)"></div>
-                <div class="input-group"><label for="exchangeRateBuyG">매수 시 환율 (원/USD)</label><input type="text" inputmode="decimal" id="exchangeRateBuyG" placeholder="비우면 매도 시 환율과 같게 계산" oninput="autoFormat(this)"><span> (세금은 매수일·매도일 환율로 각각 계산돼요)</span></div>
-            </div>
-
-            <div class="input-form">
-                <div class="input-group"><label for="buyPriceG">매수 가격 (달러, USD)</label><input type="text" inputmode="decimal" id="buyPriceG" placeholder="예: 100" oninput="autoFormat(this)"></div>
-                <div class="input-group"><label for="sellPriceG">매도 가격 (달러, USD)</label><input type="text" inputmode="decimal" id="sellPriceG" placeholder="예: 110" oninput="autoFormat(this)"></div>
-                <div class="input-group"><label for="quantityG">수량 (주)</label><input type="text" inputmode="numeric" id="quantityG" placeholder="예: 10" oninput="autoFormat(this)"></div>
-            </div>
-
-            <button class="calculate-btn" onclick="calculateProfit('global')">손익 계산하기</button>
-        </div>
-
-        <!-- [수정] 같은 id="result"가 하나 더 있던 빈 div는 쓰이지 않아서 삭제 -->
-        <div id="result" class="result">
-            <p>여기에 계산 결과가 표시됩니다.</p>
-        </div>
-
     </div>
 
+    <!-- ===== 계산 기록 시트 ===== -->
+    <div class="backdrop" id="backdrop"></div>
+    <aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <h2 id="sheetTitle">계산 기록</h2>
+            <button type="button" class="text-btn" id="clearHistory">전체 삭제</button>
+            <button type="button" class="text-btn" id="closeSheet" aria-label="닫기">✕</button>
+        </div>
+        <ul class="history-list" id="historyList"></ul>
+    </aside>
+
+    <div class="toast" id="toast" role="status"></div>
+
     <script>
-        // History 패널 토글 기능
-        function toggleHistoryPanel() {
-            const panel = document.getElementById('history-panel');
-            
-            // 현재 상태를 확인하여 클래스를 추가하거나 제거합니다.
-            if (panel.classList.contains('visible')) {
-                panel.classList.remove('visible');
-            } else {
-                panel.classList.add('visible');
-                // 패널이 열릴 때마다 최신 기록을 렌더링하도록 강제 호출 (선택 사항)
-                renderHistory(); 
-            }
-        }
+        /* =========================================================
+         * 공통 도구
+         * ========================================================= */
+        const $ = (id) => document.getElementById(id);
 
-        // 탭 전환 기능
-        function openTab(tabName) {
-            const tabs = document.querySelectorAll('.tab-content');
-            const buttons = document.querySelectorAll('.tab-button');
-            const resultDiv = document.getElementById('result');
+        // 입력칸의 쉼표를 빼고 숫자로 변환 (빈 칸이면 NaN)
+        const readNum = (id) => parseFloat(($(id).value || '').replace(/,/g, ''));
 
-            tabs.forEach(tab => tab.classList.remove('active'));
-            buttons.forEach(button => button.classList.remove('active'));
+        // 원화 표시: 1234567.8 → "1,234,568"
+        const won = (n) => Math.round(n).toLocaleString('ko-KR');
 
-            document.getElementById(tabName).classList.add('active');
-            document.querySelector(`.tab-button[onclick="openTab('${tabName}')"]`).classList.add('active');
-            
-            // 탭 전환 시 결과 초기화
-            resultDiv.innerHTML = '<p>여기에 계산 결과가 표시됩니다.</p>';
-        }
+        // 부호 붙인 원화: +97,485 / −1,200
+        const signedWon = (n) => (Math.round(n) > 0 ? '+' : Math.round(n) < 0 ? '−' : '') + won(Math.abs(n));
 
-        // 입력 필드에 쉼표를 자동으로 추가하고, 쉼표 없는 숫자 값을 반환하는 함수
+        // 입력하는 동안 세 자리마다 쉼표 추가
+        // [개선] 예전 방식은 숫자 중간을 고치면 커서가 맨 뒤로 튀었음 → 커서 위치를 기억했다가 복원
         function autoFormat(input) {
-            // 1. 숫자(0-9)와 소수점(.)을 제외한 모든 문자를 제거하여 순수한 숫자 문자열을 얻습니다.
-            let cleanValue = input.value.replace(/[^\d.]/g, '');
+            const old = input.value;
+            const caret = input.selectionStart ?? old.length;
+            const allowDot = !input.hasAttribute('data-int');
+            const keep = allowDot ? /[\d.]/ : /\d/;
+            // 커서 앞에 있던 "의미 있는 글자(숫자, 소수점)" 개수
+            const before = [...old.slice(0, caret)].filter(ch => keep.test(ch)).length;
 
-            // 2. 소수점 처리: 소수점이 두 개 이상 입력된 경우 첫 번째 소수점만 남깁니다.
-            let decimalIndex = cleanValue.indexOf('.');
-            if (decimalIndex !== -1) {
-                // 정수부와 소수부 분리
-                let integerPart = cleanValue.substring(0, decimalIndex);
-                // 첫 번째 소수점 이후에 있는 다른 소수점들은 제거
-                let decimalPart = cleanValue.substring(decimalIndex + 1).replace(/\./g, '');
-                
-                // 다시 합치기
-                cleanValue = integerPart + '.' + decimalPart;
-            }
-            
-            // 3. 쉼표를 추가하기 위해 정수부와 소수부를 최종적으로 분리합니다.
-            let parts = cleanValue.split('.');
-            let integerPart = parts[0];
-            let decimalPart = parts.length > 1 ? '.' + parts[1] : '';
+            let clean = [...old].filter(ch => keep.test(ch)).join('');
+            const dot = clean.indexOf('.');
+            if (dot !== -1) clean = clean.slice(0, dot + 1) + clean.slice(dot + 1).replace(/\./g, '');
+            const [intPart, decPart] = clean.split('.');
+            const formatted = (intPart || '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                            + (decPart !== undefined ? '.' + decPart : '');
+            input.value = formatted;
 
-            // 4. 정수부에 세 자리마다 쉼표를 추가합니다.
-            // \B: 단어 경계가 아닌 위치 (숫자 사이)
-            // (?=(\d{3})+(?!\d)): 뒤에 3자리 숫자가 반복되고 더 이상 숫자가 아닌 것(종료)이 아닌 패턴
-            integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-            
-            // 5. 쉼표가 적용된 최종 값을 입력 필드에 다시 넣어줍니다.
-            input.value = integerPart + decimalPart;
-        }
-
-        // 수수료/세금 설정 영역 토글 기능
-        function toggleSettings(settingsId) {
-            const settingsDiv = document.getElementById(settingsId);
-            settingsDiv.style.display = settingsDiv.style.display === 'none' ? 'block' : 'none';
-        }
-
-        // 숫자 포맷 함수 (세 자리마다 콤마 추가)
-        function formatNumber(num) {
-            return num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        }
-
-        // 계산 기록을 저장할 배열
-        let calculationHistory = [];
-
-        // [추가] 계산 기록을 브라우저의 localStorage에 저장해서 새로고침하거나 다시 접속해도 남도록 함.
-        // localStorage는 "이 브라우저 + 이 사이트"에만 저장됨 (다른 기기·다른 브라우저와는 공유되지 않음).
-        const HISTORY_STORAGE_KEY = 'stockCalculator.history';
-
-        // 저장된 기록 불러오기
-        function loadSavedHistory() {
-            try {
-                const saved = localStorage.getItem(HISTORY_STORAGE_KEY);
-                calculationHistory = saved ? JSON.parse(saved) : [];
-            } catch (e) {
-                // 시크릿 모드 등 저장소를 쓸 수 없거나, 저장된 값이 깨진 경우
-                calculationHistory = [];
-            }
-        }
-
-        // 현재 기록을 저장소에 쓰기
-        function persistHistory() {
-            try {
-                localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(calculationHistory));
-            } catch (e) {
-                // 저장 실패해도 계산 기능은 그대로 동작하도록 무시
-            }
-        }
-
-        /**
-         * 계산 결과를 calculationHistory 배열에 저장하고 화면에 표시합니다.
-         * @param {string} type - 'domestic' 또는 'global'
-         * @param {object} data - 매수/매도 가격, 수량, 환율 등 입력된 데이터
-         * @param {string} resultText - 계산 결과 요약 텍스트
-         */
-        function saveHistory(type, data, resultText) {
-            // [수정] 기록이 날짜를 넘어서도 남으므로 날짜(월/일)도 함께 표시
-            const now = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-            const historyItem = {
-                type: type,
-                data: data,
-                summary: resultText.substring(0, 50), // + '...' 요약 텍스트
-                timestamp: `${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
-            };
-
-            // 배열에 추가 (가장 최근 항목이 위로 오도록 prepend)
-            calculationHistory.unshift(historyItem);
-            
-            /*
-            // 최대 10개까지만 저장 (선택 사항)
-            if (calculationHistory.length > 10) {
-                calculationHistory.pop();
-            }
-            */
-
-            persistHistory(); // [추가] 브라우저에 저장
-            renderHistory(); // 화면 업데이트
-        }
-
-        /**
-         * 저장된 계산 기록을 HTML 목록으로 표시합니다.
-         */
-        function renderHistory() {
-            const historyList = document.getElementById('history-list');
-            historyList.innerHTML = ''; // 목록 초기화
-
-            calculationHistory.forEach((item, index) => {
-                const listItem = document.createElement('li');
-                
-                // 표시할 텍스트: [시간] [국내/해외] 요약
-                const typeText = item.type === 'domestic' ? '🇰🇷국내' : '🌎해외';
-                listItem.textContent = `[${item.timestamp}] ${typeText} | ${item.summary}`;
-                
-                // 클릭 시 불러오기 함수 연결
-                listItem.onclick = () => loadHistory(index);
-                
-                historyList.appendChild(listItem);
-            });
-        }
-
-        /**
-         * 특정 기록 항목을 입력 필드에 다시 불러옵니다.
-         * @param {number} index - calculationHistory 배열의 인덱스
-         */
-        function loadHistory(index) {
-            const item = calculationHistory[index];
-            if (!item) return;
-
-            // 1. 탭 전환
-            const targetTabId = item.type;
-            openTab(targetTabId);
-            
-            // 2. 입력 필드에 데이터 채우기
-            const data = item.data;
-            
-            // 쉼표 포맷을 적용하여 값 채우기
-            // autoFormat 함수가 이미 정의되어 있으므로, 이를 이용해 값을 채웁니다.
-            const fields = [
-                // 국내
-                { id: 'buyPriceD', value: data.buyPriceD },
-                { id: 'sellPriceD', value: data.sellPriceD },
-                { id: 'quantityD', value: data.quantityD },
-                // 국내 주식 설정 필드(수수료, 거래세)
-                { id: 'commRateD', value: data.commRateD },
-                { id: 'taxRateD', value: data.taxRateD },
-                // 해외
-                { id: 'buyPriceG', value: data.buyPriceG },
-                { id: 'sellPriceG', value: data.sellPriceG },
-                { id: 'quantityG', value: data.quantityG },
-                // 해외 주식 설정 필드(수수료, 양도세, 기본공제, 환율)
-                { id: 'commRateG', value: data.commRateG },
-                { id: 'taxRateG', value: data.taxRateG },
-                { id: 'taxBaseG', value: data.taxBaseG },
-                { id: 'exchangeRateG', value: data.exchangeRateG },
-                { id: 'exchangeRateBuyG', value: data.exchangeRateBuyG },
-            ];
-
-            fields.forEach(field => {
-                const inputElement = document.getElementById(field.id);
-                if (inputElement) {
-                    // [수정] 빈 칸이었던 값은 저장될 때 NaN(또는 저장소에서 null)이 되므로 빈 문자열로 되돌림.
-                    // 예전 기록처럼 값 자체가 없는 경우(undefined)도 빈 칸으로 처리.
-                    const isEmpty = field.value === undefined || field.value === null || Number.isNaN(field.value);
-                    // 값에 쉼표가 있었다면 포맷팅을 위해 autoFormat 함수를 수동 호출 (입력 필드에만 해당)
-                    inputElement.value = isEmpty ? '' : String(field.value); // 순수한 값 먼저 할당
-
-                    // 가격, 환율, 공제와 같이 쉼표가 필요한 필드에만 autoFormat 적용
-                    if (field.id.includes('Price') || field.id.includes('quantity') || field.id.includes('exchangeRate') || field.id.includes('taxBase')) {
-                        autoFormat(inputElement);
-                    }
+            // 같은 개수의 의미 있는 글자 뒤로 커서 복원
+            if (document.activeElement === input) {
+                let pos = 0, count = 0;
+                while (pos < formatted.length && count < before) {
+                    if (keep.test(formatted[pos])) count++;
+                    pos++;
                 }
-            });
-
-            calculateProfit(targetTabId, false); // 계산 결과 표시
-        }
-
-        /**
-         * 계산 기록을 완전히 지웁니다.
-         */
-        function clearHistory() {
-            // [추가] 이제 기록이 브라우저에 저장되므로, 실수로 지우지 않도록 한 번 확인
-            if (calculationHistory.length > 0 && !confirm('계산 기록을 모두 지울까요?')) {
-                return;
+                input.setSelectionRange(pos, pos);
             }
-            calculationHistory = [];
-            persistHistory();
-            renderHistory();
         }
 
-        // 손익 계산 메인 함수
-        function calculateProfit(type, isSaveHistory = true) {
-            const resultDiv = document.getElementById('result');
-            let buyPrice, sellPrice, quantity, commRate, taxRate, currencyUnit, taxName, taxBase, exchangeRate, exchangeRateBuy;
-            let summaryBuyText; // 기록 목록에 보여줄 매수 가격 (해외는 달러 그대로 표시)
+        /* =========================================================
+         * 계산 (현재 index.html과 같은 공식)
+         * ========================================================= */
+        function calculate(type) {
+            let buyPrice, sellPrice, quantity, commRate, taxRate, taxName, taxBase = 0, rateBuy, rateSell;
 
-            // 1. 입력 값 가져오기
             if (type === 'domestic') {
-                buyPrice = parseFloat(document.getElementById('buyPriceD').value.replace(/,/g, ''));
-                sellPrice = parseFloat(document.getElementById('sellPriceD').value.replace(/,/g, ''));
-                quantity = parseInt(document.getElementById('quantityD').value.replace(/,/g, ''));
-                commRate = parseFloat(document.getElementById('commRateD').value) / 100; // % -> 소수
-                taxRate = parseFloat(document.getElementById('taxRateD').value) / 100; // % -> 소수
-                currencyUnit = '원';
+                buyPrice = readNum('buyPriceD');
+                sellPrice = readNum('sellPriceD');
+                quantity = parseInt(($('quantityD').value || '').replace(/,/g, ''));
+                commRate = (readNum('commRateD') || 0) / 100;
+                taxRate = (readNum('taxRateD') || 0) / 100;
                 taxName = '거래세';
-                summaryBuyText = `${formatNumber(buyPrice)}원`;
-            } else if (type === 'global') {
-                buyPrice = parseFloat(document.getElementById('buyPriceG').value.replace(/,/g, ''));
-                sellPrice = parseFloat(document.getElementById('sellPriceG').value.replace(/,/g, ''));
-                quantity = parseInt(document.getElementById('quantityG').value.replace(/,/g, ''));
-                exchangeRate = parseFloat(document.getElementById('exchangeRateG').value.replace(/,/g, ''));
-                commRate = parseFloat(document.getElementById('commRateG').value) / 100; // % -> 소수
-                taxRate = parseFloat(document.getElementById('taxRateG').value) / 100; // % -> 소수 (양도소득세)
-                taxBase = parseInt(document.getElementById('taxBaseG').value.replace(/,/g, '')) || 0; // 기본 공제 (빈 칸이면 0)
-                currencyUnit = '원';
+            } else {
+                buyPrice = readNum('buyPriceG');
+                sellPrice = readNum('sellPriceG');
+                quantity = parseInt(($('quantityG').value || '').replace(/,/g, ''));
+                commRate = (readNum('commRateG') || 0) / 100;
+                taxRate = (readNum('taxRateG') || 0) / 100;
+                taxBase = readNum('taxBaseG') || 0;
                 taxName = '양도소득세';
-
-                // [추가] 매수 시 환율. 비어 있으면 매도 시 환율과 같다고 보고 계산
-                exchangeRateBuy = parseFloat(document.getElementById('exchangeRateBuyG').value.replace(/,/g, ''));
-                if (!exchangeRateBuy) exchangeRateBuy = exchangeRate;
-
-                // 기록 목록에는 원화로 바꾸기 전의 달러 가격을 표시
-                summaryBuyText = `$${buyPrice.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
-
-                // 달러 금액을 원화로 환산 (계산을 원화 기준으로 진행)
-                // [수정] 세법상 취득가액은 매수일 환율, 양도가액은 매도일 환율로 각각 환산함
-                if (exchangeRate) {
-                    buyPrice *= exchangeRateBuy;
-                    sellPrice *= exchangeRate;
-                } else {
-                    alert('환율을 입력해 주세요.');
-                    return;
-                }
+                rateSell = readNum('exchangeRateG');
+                rateBuy = readNum('exchangeRateBuyG') || rateSell;
+                if (!rateSell) return null;
+                buyPrice *= rateBuy;    // 취득가액: 매수일 환율
+                sellPrice *= rateSell;  // 양도가액: 매도일 환율
             }
 
-            // 2. 입력 유효성 검사
-            if (isNaN(buyPrice) || isNaN(sellPrice) || isNaN(quantity) || quantity <= 0) {
-                resultDiv.innerHTML = '<p style="color:red;">⚠️ 매수/매도 가격 및 수량을 정확히 입력해 주세요.</p>';
-                return;
+            if (isNaN(buyPrice) || isNaN(sellPrice) || isNaN(quantity) || quantity <= 0 || buyPrice <= 0) {
+                return null; // 아직 입력이 덜 됨
             }
 
-            // 3. 계산 로직
-            const totalBuy = buyPrice * quantity; // 총 매수 금액
-            const buyComm = totalBuy * commRate; // 매수 수수료
-            const totalSell = sellPrice * quantity; // 총 매도 금액
-            const sellComm = totalSell * commRate; // 매도 수수료
-
-            let profitLossBeforeTax = totalSell - totalBuy - buyComm - sellComm; // 세전 손익
+            const totalBuy = buyPrice * quantity;
+            const buyComm = totalBuy * commRate;
+            const totalSell = sellPrice * quantity;
+            const sellComm = totalSell * commRate;
+            const beforeTax = totalSell - totalBuy - buyComm - sellComm;
 
             let tax = 0;
-            let netProfitLoss = 0; // 최종 손익
-            let nTotalRate = 0; // 총 수익률
-
             if (type === 'domestic') {
-                // 국내 주식: 거래세 (매도 금액 기준)
                 tax = totalSell * taxRate;
-                netProfitLoss = profitLossBeforeTax - tax;
-            } else if (type === 'global') {
-                // 해외 주식: 양도소득세 (이익 발생 시)
-                // [수정] 양도차익 = 매도 금액 - 매수 금액 - 필요경비(매수·매도 수수료)
-                // 예전에는 수수료를 빼지 않아서 세금이 조금 더 많이 계산되었음
-                const capitalGain = profitLossBeforeTax;
-
-                if (capitalGain > 0) {
-                    // 기본 공제 적용 후 과세 표준 계산
-                    let taxableIncome = capitalGain - taxBase;
-                    if (taxableIncome < 0) taxableIncome = 0; // 과세 표준은 0보다 작을 수 없음
-
-                    tax = taxableIncome * taxRate; // 양도소득세
-                    // 양도소득세는 양도차익이 발생했을 때만 부과됨
-                }
-                netProfitLoss = profitLossBeforeTax - tax;
+            } else if (beforeTax > 0) {
+                // 양도차익(수수료 공제 후) - 기본 공제 → 과세표준
+                tax = Math.max(0, beforeTax - taxBase) * taxRate;
             }
+            const net = beforeTax - tax;
 
-            nTotalRate = (netProfitLoss / totalBuy * 100).toFixed(3);
-
-            // 4. 결과 출력
-            const profitLossClass = netProfitLoss >= 0 ? 'profit' : 'loss';
-            const totalTax = type === 'domestic' ? tax : tax; // 국내:거래세, 해외:양도세
-            
-            let resultHTML = `
-                <h2>💰 계산 결과</h2>
-                <p>매수 원금: ${formatNumber(totalBuy)} ${currencyUnit}</p>
-                <p>매수 수수료 (${(commRate * 100).toFixed(3)}%): ${formatNumber(buyComm)} ${currencyUnit}</p>
-                <p>총 매수 금액: ${formatNumber(totalBuy + buyComm)} ${currencyUnit}</p>
-                <hr>
-                <p>매도 원금: ${formatNumber(totalSell)} ${currencyUnit}</p>
-                <p>매도 수수료 (${(commRate * 100).toFixed(3)}%): ${formatNumber(sellComm)} ${currencyUnit}</p>
-                <p>${taxName} (${(taxRate * 100).toFixed(2)}%): ${formatNumber(totalTax)} ${currencyUnit}</p>
-                <p>총 매도 금액: ${formatNumber(totalSell - sellComm - totalTax)} ${currencyUnit}</p>
-                <hr>
-                <p>세전 손익: ${formatNumber(profitLossBeforeTax)} ${currencyUnit}</p>
-                <p><strong>총 손익: <span class="${profitLossClass}">${formatNumber(netProfitLoss)} ${currencyUnit}</span></strong></p>
-                <p><strong>총 수익률: <span class="${profitLossClass}">${nTotalRate}${'%'}</span></strong></p>
-            `;
-            
-            if (type === 'global') {
-                const rateText = exchangeRateBuy === exchangeRate
-                    ? `${formatNumber(exchangeRate)}원/USD`
-                    : `매수 ${formatNumber(exchangeRateBuy)} → 매도 ${formatNumber(exchangeRate)}원/USD`;
-                resultHTML += `
-                    <p class="note">적용 환율: ${rateText}</p>
-                    <p class="note">(양도소득세 기본 공제 ${formatNumber(taxBase)}원이 적용된 금액입니다.
-                    기본 공제는 1년에 한 번만 적용되므로, 올해 다른 해외주식 매매 손익이 있으면 실제 세금은 달라질 수 있어요.)</p>`;
-            }
-
-            resultDiv.innerHTML = resultHTML;
-
-            // -------------------------------------------------------------
-            // [핵심 추가] 계산 기록 저장 전에 입력 데이터를 객체로 만듭니다.
-            if (isSaveHistory) {
-                const inputData = {
-                    buyPriceD: parseFloat(document.getElementById('buyPriceD').value.replace(/,/g, '')),    // 국내 매수 가격
-                    sellPriceD: parseFloat(document.getElementById('sellPriceD').value.replace(/,/g, '')),  // 국내 매도 가격
-                    quantityD: parseInt(document.getElementById('quantityD').value.replace(/,/g, '')),    // 국내 수량
-                    commRateD: parseFloat(document.getElementById('commRateD').value),  // 국내 수수료
-                    taxRateD: parseFloat(document.getElementById('taxRateD').value),    // 국내 세금
-                    
-                    buyPriceG: parseFloat(document.getElementById('buyPriceG').value.replace(/,/g, '')),    // 해외 매수 가격
-                    sellPriceG: parseFloat(document.getElementById('sellPriceG').value.replace(/,/g, '')),  // 해외 매도 가격
-                    quantityG: parseInt(document.getElementById('quantityG').value.replace(/,/g, '')),    // 해외 수량
-                    commRateG: parseFloat(document.getElementById('commRateG').value),  // 해외 수수료
-                    taxRateG: parseFloat(document.getElementById('taxRateG').value),    // 해외 세금
-                    taxBaseG: parseInt(document.getElementById('taxBaseG').value.replace(/,/g, '')),
-                    exchangeRateG: parseFloat(document.getElementById('exchangeRateG').value.replace(/,/g, '')), // 매도 시 환율
-                    exchangeRateBuyG: parseFloat(document.getElementById('exchangeRateBuyG').value.replace(/,/g, '')), // 매수 시 환율
-                };
-
-                // **[핵심 추가] 계산 결과를 저장**
-                const summaryText = `매수: ${summaryBuyText} | 수량: ${formatNumber(quantity)}`;
-
-                // 최종적으로 결과 창에 HTML을 출력하는 코드입니다.
-                resultDiv.innerHTML = resultHTML; // (기존 코드)
-
-                // 계산 기록 저장 함수 호출 (최종 결과 텍스트를 인자로 넘김)
-                saveHistory(type, inputData, summaryText);
-            }
-            // -------------------------------------------------------------
+            return {
+                type, quantity, commRate, taxRate, taxName, taxBase, rateBuy, rateSell,
+                totalBuy, buyComm, totalSell, sellComm, beforeTax, tax, net,
+                rate: net / totalBuy * 100,
+                payIn: totalBuy + buyComm,              // 실제로 낸 돈
+                payOut: totalSell - sellComm - tax,     // 실제로 받는 돈
+            };
         }
 
-        // 페이지 로드 시 국내 주식 탭이 보이도록 설정
-        document.addEventListener('DOMContentLoaded', () => {
-            openTab('domestic');
-            loadSavedHistory(); // [추가] 브라우저에 저장된 계산 기록 불러오기
+        /* =========================================================
+         * 결과 그리기
+         * ========================================================= */
+        let currentTab = 'domestic';
+        let lastResult = null;
+
+        function renderResult() {
+            const r = calculate(currentTab);
+            lastResult = r;
+            const box = $('result');
+
+            if (!r) {
+                box.className = 'card result-card';
+                box.innerHTML = `
+                    <div class="result-empty">
+                        <span class="icon">🧮</span>
+                        매수가·매도가·수량을 입력하면<br>바로 계산돼요
+                    </div>`;
+                return;
+            }
+
+            const dir = Math.round(r.net) > 0 ? 'is-up' : Math.round(r.net) < 0 ? 'is-down' : 'is-flat';
+            const arrow = dir === 'is-up' ? '▲' : dir === 'is-down' ? '▼' : '';
+            const pct = (n) => (n * 100).toFixed(3).replace(/\.?0+$/, '') + '%';
+
+            let fxRow = '';
+            let note = '';
+            if (r.type === 'global') {
+                const fx = r.rateBuy === r.rateSell
+                    ? `${won(r.rateSell)}원`
+                    : `${won(r.rateBuy)} → ${won(r.rateSell)}원`;
+                fxRow = `<li><span>적용 환율 (USD)</span><span>${fx}</span></li>`;
+                note = `<p class="note">기본 공제 ${won(r.taxBase)}원을 이 거래에 모두 적용한 금액이에요.
+                        기본 공제는 1년에 한 번이라, 올해 다른 해외주식 손익이 있으면 실제 세금은 달라질 수 있어요.</p>`;
+            }
+
+            box.className = `card result-card ${dir}`;
+            box.innerHTML = `
+                <div class="result-label">예상 순손익 <span style="font-weight:400;color:var(--text-3)">(수수료·세금 차감)</span></div>
+                <div class="result-amount">${signedWon(r.net)}<small>원</small></div>
+                <span class="rate-pill">${arrow} ${Math.abs(r.rate).toFixed(2)}%</span>
+
+                <ul class="rows">
+                    <li><span>내는 돈 (매수+수수료)</span><span>${won(r.payIn)}원</span></li>
+                    <li><span>받는 돈 (매도−수수료−세금)</span><span>${won(r.payOut)}원</span></li>
+                    <li><span>수수료·세금 합계</span><span>${won(r.buyComm + r.sellComm + r.tax)}원</span></li>
+                </ul>
+
+                <details class="breakdown">
+                    <summary>계산 내역 자세히 보기</summary>
+                    <ul class="rows">
+                        <li><span>매수 금액</span><span>${won(r.totalBuy)}원</span></li>
+                        <li class="sub"><span>매수 수수료 (${pct(r.commRate)})</span><span>${won(r.buyComm)}원</span></li>
+                        <li><span>매도 금액</span><span>${won(r.totalSell)}원</span></li>
+                        <li class="sub"><span>매도 수수료 (${pct(r.commRate)})</span><span>${won(r.sellComm)}원</span></li>
+                        <li class="sub"><span>${r.taxName} (${pct(r.taxRate)})</span><span>${won(r.tax)}원</span></li>
+                        ${fxRow}
+                        <li class="divider"><span>세전 손익</span><span>${signedWon(r.beforeTax)}원</span></li>
+                        <li><span>순손익</span><span>${signedWon(r.net)}원</span></li>
+                        <li><span>수익률</span><span>${r.rate.toFixed(3)}%</span></li>
+                    </ul>
+                    ${note}
+                </details>
+
+                <button type="button" class="save-btn" id="saveBtn">기록에 저장</button>`;
+            $('saveBtn').addEventListener('click', saveCurrent);
+        }
+
+        /* =========================================================
+         * 설정 요약 문구 (접혀 있어도 현재 값이 보이게)
+         * ========================================================= */
+        function updateChips() {
+            $('chipD').textContent = `수수료 ${$('commRateD').value || 0}% · 거래세 ${$('taxRateD').value || 0}%`;
+            $('chipG').textContent = `수수료 ${$('commRateG').value || 0}% · 양도세 ${$('taxRateG').value || 0}%`;
+        }
+
+        /* =========================================================
+         * 탭 전환
+         * ========================================================= */
+        function switchTab(type) {
+            currentTab = type;
+            document.querySelectorAll('.segmented button').forEach(btn => {
+                btn.setAttribute('aria-selected', String(btn.dataset.tab === type));
+            });
+            $('panel-domestic').hidden = type !== 'domestic';
+            $('panel-global').hidden = type !== 'global';
+            renderResult();
+        }
+
+        /* =========================================================
+         * 계산 기록 (index.html과 같은 저장소·형식 → 기존 기록 그대로 보임)
+         * ========================================================= */
+        const HISTORY_KEY = 'stockCalculator.history';
+        const FIELD_IDS = ['buyPriceD', 'sellPriceD', 'quantityD', 'commRateD', 'taxRateD',
+                           'buyPriceG', 'sellPriceG', 'quantityG', 'commRateG', 'taxRateG', 'taxBaseG',
+                           'exchangeRateG', 'exchangeRateBuyG'];
+        let history = [];
+
+        function loadHistory() {
+            try { history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+            catch (e) { history = []; }
+        }
+        function persistHistory() {
+            try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch (e) { /* 저장 실패는 무시 */ }
+        }
+
+        function saveCurrent() {
+            const r = lastResult;
+            if (!r) return;
+            const data = {};
+            FIELD_IDS.forEach(id => { data[id] = readNum(id); });
+
+            const now = new Date();
+            const p = (n) => String(n).padStart(2, '0');
+            const buyText = r.type === 'global'
+                ? `$${readNum('buyPriceG').toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+                : `${won(readNum('buyPriceD'))}원`;
+            const sellText = r.type === 'global'
+                ? `$${readNum('sellPriceG').toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+                : `${won(readNum('sellPriceD'))}원`;
+
+            history.unshift({
+                type: r.type,
+                data,
+                summary: `매수: ${buyText} | 수량: ${won(r.quantity)}`, // index.html과 호환
+                title: `${buyText} → ${sellText} × ${won(r.quantity)}주`,
+                net: r.net,
+                rate: r.rate,
+                timestamp: `${p(now.getMonth() + 1)}/${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`,
+            });
+            persistHistory();
             renderHistory();
+            showToast('기록에 저장했어요');
+        }
+
+        function renderHistory() {
+            const list = $('historyList');
+            list.innerHTML = '';
+            $('historyCount').textContent = history.length ? String(history.length) : '';
+            $('clearHistory').hidden = history.length === 0;
+
+            if (history.length === 0) {
+                list.innerHTML = '<li class="history-empty">아직 저장한 기록이 없어요.<br>계산 후 “기록에 저장”을 눌러보세요.</li>';
+                return;
+            }
+
+            history.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'history-item';
+
+                const info = document.createElement('div');
+                info.className = 'info';
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                meta.textContent = `${item.type === 'domestic' ? '국내' : '해외'} · ${item.timestamp}`;
+                const main = document.createElement('div');
+                main.className = 'main';
+                main.textContent = item.title || item.summary; // 예전 기록은 summary 표시
+                info.append(meta, main);
+                li.append(info);
+
+                if (typeof item.net === 'number') {
+                    const pl = document.createElement('div');
+                    const dir = Math.round(item.net) > 0 ? 'up' : Math.round(item.net) < 0 ? 'down' : '';
+                    pl.className = `pl ${dir}`;
+                    pl.innerHTML = `${signedWon(item.net)}원<br><span style="font-size:.75rem">${item.rate.toFixed(2)}%</span>`;
+                    li.append(pl);
+                }
+
+                const del = document.createElement('button');
+                del.type = 'button';
+                del.className = 'del';
+                del.setAttribute('aria-label', '이 기록 삭제');
+                del.textContent = '✕';
+                del.addEventListener('click', (e) => {
+                    e.stopPropagation(); // 항목 클릭(불러오기)으로 번지지 않게
+                    history.splice(index, 1);
+                    persistHistory();
+                    renderHistory();
+                });
+                li.append(del);
+
+                li.addEventListener('click', () => applyHistory(item));
+                list.append(li);
+            });
+        }
+
+        function applyHistory(item) {
+            FIELD_IDS.forEach(id => {
+                const v = item.data ? item.data[id] : undefined;
+                const empty = v === undefined || v === null || Number.isNaN(v);
+                const input = $(id);
+                input.value = empty ? '' : String(v);
+                autoFormat(input);
+            });
+            updateChips();
+            switchTab(item.type);
+            closeSheet();
+        }
+
+        /* ---------- 시트 열기/닫기 ---------- */
+        function openSheet() { document.body.classList.add('sheet-open'); $('closeSheet').focus(); }
+        function closeSheet() { document.body.classList.remove('sheet-open'); }
+
+        /* ---------- 토스트 ---------- */
+        let toastTimer;
+        function showToast(msg) {
+            const t = $('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+        }
+
+        /* =========================================================
+         * 이벤트 연결
+         * ========================================================= */
+        document.querySelectorAll('.segmented button').forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
         });
+
+        // 입력할 때마다: 쉼표 정리 → 설정 요약 갱신 → 즉시 재계산
+        document.querySelectorAll('.panel input').forEach(input => {
+            input.addEventListener('input', () => {
+                autoFormat(input);
+                updateChips();
+                renderResult();
+            });
+        });
+
+        $('historyBtn').addEventListener('click', openSheet);
+        $('closeSheet').addEventListener('click', closeSheet);
+        $('backdrop').addEventListener('click', closeSheet);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+        $('clearHistory').addEventListener('click', () => {
+            if (confirm('계산 기록을 모두 지울까요?')) {
+                history = [];
+                persistHistory();
+                renderHistory();
+            }
+        });
+
+        loadHistory();
+        renderHistory();
+        updateChips();
+        renderResult();
     </script>
 </body>
-
 </html>
-
