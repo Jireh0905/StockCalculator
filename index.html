@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>주식 손익 계산기</title>
     <style>
+        /*
+         * [글자 크기 단위 메모]
+         * em  : 부모 요소의 글자 크기 기준 → 안쪽으로 들어갈수록 곱해져서 계속 작아짐
+         *       (예: 0.6em 안의 0.6em = 0.36배)
+         * rem : 최상위(html) 글자 크기(보통 16px) 기준 → 어디에 있든 항상 같은 크기
+         * 그래서 글자 크기는 모두 rem으로 지정함.
+         */
+
         /* 기본 스타일 */
         body {
             font-family: Arial, sans-serif;
@@ -36,7 +44,7 @@
             margin-right: 5px;
             border-top-left-radius: 5px;
             border-top-right-radius: 5px;
-            font-size: 1.2em;
+            font-size: 1.2rem;
             font-weight: bold;
             transition: background 0.3s;
         }
@@ -74,22 +82,22 @@
             border-radius: 4px;
             box-sizing: border-box;
 
-            font-size: 1em;
+            font-size: 1rem;
             color: #333;
         }
         .input-group span {
             margin-left: 5px;
-            font-size: 0.9em;
+            font-size: 0.9rem;
             color: #666;
         }
-        
+
         /* 설정 영역 스타일 */
         .settings-toggle {
             cursor: pointer;
             color: #007bff;
             margin-bottom: 15px;
             display: inline-block;
-            font-size: 1.1em;
+            font-size: 1.1rem;
         }
         .settings-content {
             border: 1px solid #eee;
@@ -100,7 +108,7 @@
         }
 
         /* 버튼 및 결과 스타일 */
-        button#calculate {
+        .calculate-btn {
             width: 100%;
             margin-top: 30px;
             padding: 20px;
@@ -108,11 +116,11 @@
             color: white;
             border: none;
             border-radius: 4px;
-            font-size: 1.5em;
+            font-size: 1.5rem;
             cursor: pointer;
             transition: background-color 0.3s;
         }
-        button#calculate:hover {
+        .calculate-btn:hover {
             background-color: #0056b3;
         }
         .result {
@@ -121,7 +129,12 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             background-color: #e9ecef;
-            font-size: 1.1em;
+            font-size: 1.1rem;
+        }
+        .result .note {
+            font-size: 0.85rem;
+            color: #555;
+            margin-top: 10px;
         }
         .result p {
             margin: 5px 0;
@@ -158,7 +171,7 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 1em;
+            font-size: 1rem;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             transition: background-color 0.3s;
         }
@@ -180,15 +193,17 @@
             padding: 15px;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
             
-            /* 초기에는 숨기기 */
-            display: none; 
+            /* 초기에는 숨기기
+             * [수정] display: none ↔ block 전환에는 transition(애니메이션)이 적용되지 않음.
+             * 그래서 visibility(보이기/숨기기)와 opacity(투명도)로 숨겨서 애니메이션이 보이게 함. */
+            visibility: hidden;
             opacity: 0;
-            transition: opacity 0.3s, transform 0.3s;
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
             transform: translateY(-10px); /* 약간 위에서 나타나는 효과 */
         }
         /* 패널이 활성화될 때 (JavaScript에서 클래스 토글) */
         #history-panel.visible {
-            display: block;
+            visibility: visible;
             opacity: 1;
             transform: translateY(0);
         }
@@ -196,7 +211,7 @@
         /* 기타 내부 목록 스타일은 기존 것을 유지 */
         #history-panel h3 {
             margin-top: 0;
-            font-size: 1.1em;
+            font-size: 1.1rem;
         }
         #history-list {
             list-style: none;
@@ -208,13 +223,13 @@
             border-bottom: 1px dashed #e0e0e0;
             cursor: pointer; /* 클릭 가능하다는 표시 */
             transition: background-color 0.2s;
-            font-size: 0.75em;
+            font-size: 0.75rem;
         }
         #history-list li:hover {
             background-color: #e0f7fa; /* 마우스 오버 시 색상 변경 */
         }
         #history-clear-button {
-            margin-top: 10px; padding: 5px 10px; cursor: pointer; font-size: 0.9em;
+            margin-top: 10px; padding: 5px 10px; cursor: pointer; font-size: 0.9rem;
         }
 
         /* 모바일 반응형 */
@@ -222,55 +237,90 @@
             body {
                 padding: 10px;
             }
+            /* [수정] 예전에는 컨테이너 0.6em × 입력 그룹 0.6em이 곱해져서
+             * 라벨·입력칸 글자가 약 6px까지 작아졌음 → rem으로 크기를 직접 지정 */
             .calculator-container {
                 padding: 10px;
-                font-size: 0.6em;
+                font-size: 0.9rem;
+            }
+            .calculator-container h1 {
+                font-size: 1.3rem;
+                padding-right: 80px; /* 오른쪽 위 기록 버튼과 겹치지 않도록 */
             }
             .tab-button {
                 text-align: center;
-                padding: 8px 8px;
-                font-size: 1.1em;
+                padding: 8px 10px;
+                font-size: 0.95rem;
             }
 
             .input-group {
-                margin-bottom: 8px;
-                font-size: 0.6em;
+                margin-bottom: 10px;
+            }
+            .input-group label {
+                font-size: 0.85rem;
+            }
+            /* 입력칸은 16px(1rem) 이상이어야 아이폰에서 입력할 때 화면이 자동 확대되지 않음 */
+            .input-group input[type="number"],
+            .input-group input[type="text"] {
+                padding: 8px;
+                font-size: 1rem;
             }
             .input-group span {
-				margin-left: 10px;
-				font-size: 0.6em;
+				display: block;   /* 좁은 화면에서는 안내 문구를 입력칸 아래 줄에 표시 */
+				margin-top: 3px;
+				margin-left: 0;
+				font-size: 0.75rem;
 				color: #666;
 			}
-            
+
             .settings-toggle {
                 margin-bottom: 8px;
-                font-size: 1.0em;
+                font-size: 0.95rem;
             }
 
-            button#calculate {
+            .calculate-btn {
                 margin-top: 15px;
-                padding: 10px;
+                padding: 12px;
                 border-radius: 4px;
-                font-size: 1.4em;
+                font-size: 1.15rem;
+            }
+
+            .result {
+                padding: 10px;
+                font-size: 0.9rem;
+            }
+            .result h2 {
+                font-size: 1.15rem;
             }
 
             /* 모바일 환경은 아이콘 그대로 유지 */
             #history-icon {
                 top: 15px; /* 모바일 컨테이너 패딩(15px)에 맞춰 조정 */
                 right: 15px;
+                padding: 8px 12px;
+                font-size: 0.85rem;
             }
             /* 모바일에서는 패널 너비를 화면에 맞게 조정 */
             #history-panel {
-                width: 50vw; /* 화면 너비의 50% */
-                right: 0vw;  /* 우측에서 0% 떨어지게 하여 중앙에 가깝게 배치 */
-                top: 45px;
-                max-height: 200px;  /* 최대 높이 지정 */
+                width: 80vw;        /* 화면 너비의 80% */
+                max-width: 320px;
+                right: 10px;
+                top: 55px;
+                max-height: 300px;  /* 최대 높이 지정 */
+                padding: 10px;
+            }
+            #history-panel h3 {
+                font-size: 1rem;
             }
             #history-list li {
-                font-size: 7.5px;/*[Jireh] em으로는 왜인지 모르게 너무 작은 단위는 반영이 안 되는 듯해서 픽셀로 단위 변경. 0.4em;*/
+                /* [Jireh] em으로 아주 작게 하면 반영이 안 되는 듯해서 7.5px로 썼었음.
+                 * → 원인: em이 부모 크기에 곱해져서 0.6 × 0.4 = 0.24배(약 3.8px)가 되었기 때문.
+                 *   브라우저의 최소 글자 크기보다 작아서 무시된 것. rem으로 바꿔서 해결. */
+                font-size: 0.75rem;
+                padding: 4px 2px;
             }
             #history-clear-button {
-                margin-top: 10px; padding: 2px 5px; cursor: pointer; font-size: 0.5em;
+                margin-top: 10px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem;
             }
         }
     </style>
@@ -282,7 +332,7 @@
         <div id="history-menu-container">
             <button id="history-icon" onclick="toggleHistoryPanel()">≣Jireh</button>
 
-            <div id="history-panel" class="hidden">
+            <div id="history-panel">
                 <h3>📊 계산 기록</h3>
                 <ul id="history-list">
                     </ul>
@@ -305,12 +355,13 @@
             </div>
 
             <div class="input-form">
-                <div class="input-group"><label for="buyPriceD">매수 가격 (원)</label><input type="text" id="buyPriceD" placeholder="예: 10,000" oninput="autoFormat(this)"></div>
-                <div class="input-group"><label for="sellPriceD">매도 가격 (원)</label><input type="text" id="sellPriceD" placeholder="예: 11,000" oninput="autoFormat(this)"></div>
-                <div class="input-group"><label for="quantityD">수량 (주)</label><input type="text" id="quantityD" placeholder="예: 10" oninput="autoFormat(this)"></div>
+                <div class="input-group"><label for="buyPriceD">매수 가격 (원)</label><input type="text" inputmode="decimal" id="buyPriceD" placeholder="예: 10,000" oninput="autoFormat(this)"></div>
+                <div class="input-group"><label for="sellPriceD">매도 가격 (원)</label><input type="text" inputmode="decimal" id="sellPriceD" placeholder="예: 11,000" oninput="autoFormat(this)"></div>
+                <div class="input-group"><label for="quantityD">수량 (주)</label><input type="text" inputmode="numeric" id="quantityD" placeholder="예: 10" oninput="autoFormat(this)"></div>
             </div>
 
-            <button id="calculate" onclick="calculateProfit('domestic')">손익 계산하기</button>
+            <!-- [수정] id는 페이지에서 하나만 쓸 수 있어서, 두 탭의 계산 버튼은 class로 스타일을 공유 -->
+            <button class="calculate-btn" onclick="calculateProfit('domestic')">손익 계산하기</button>
         </div>
 
         <div id="global" class="tab-content">
@@ -320,28 +371,25 @@
             <div id="settingsG" class="settings-content" style="display:none;">
                 <div class="input-group"><label for="commRateG">증권사 수수료율 (매수/매도 시, %)</label><input type="number" id="commRateG" value="0.10" step="0.01"><span> (기본: 0.10%)</span></div>
                 <div class="input-group"><label for="taxRateG">양도소득세율 (이익 발생 시, %)</label><input type="number" id="taxRateG" value="22.0" step="0.1"><span> (기본: 22.0% - 지방소득세 포함)</span></div>
-                <div class="input-group"><label for="taxBaseG">양도소득세 기본 공제 (원)</label><input type="text" id="taxBaseG" value="2,500,000" step="100,000,000" oninput="autoFormat(this)"><span> (기본: 250만 원)</span></div>
-                <div class="input-group"><label for="exchangeRateG">적용 환율 (원/USD)</label><input type="text" id="exchangeRateG" placeholder="예: 1,300" value="1,300" oninput="autoFormat(this)"></div>
+                <div class="input-group"><label for="taxBaseG">양도소득세 기본 공제 (원)</label><input type="text" inputmode="numeric" id="taxBaseG" value="2,500,000" oninput="autoFormat(this)"><span> (기본: 250만 원, 1년에 한 번 적용)</span></div>
+                <div class="input-group"><label for="exchangeRateG">매도 시 환율 (원/USD)</label><input type="text" inputmode="decimal" id="exchangeRateG" placeholder="예: 1,300" value="1,300" oninput="autoFormat(this)"></div>
+                <div class="input-group"><label for="exchangeRateBuyG">매수 시 환율 (원/USD)</label><input type="text" inputmode="decimal" id="exchangeRateBuyG" placeholder="비우면 매도 시 환율과 같게 계산" oninput="autoFormat(this)"><span> (세금은 매수일·매도일 환율로 각각 계산돼요)</span></div>
             </div>
 
             <div class="input-form">
-                <div class="input-group"><label for="buyPriceG">매수 가격 (달러, USD)</label><input type="text" id="buyPriceG" placeholder="예: 100" oninput="autoFormat(this)"></div>
-                <div class="input-group"><label for="sellPriceG">매도 가격 (달러, USD)</label><input type="text" id="sellPriceG" placeholder="예: 110" oninput="autoFormat(this)"></div>
-                <div class="input-group"><label for="quantityG">수량 (주)</label><input type="text" id="quantityG" placeholder="예: 10" oninput="autoFormat(this)"></div>
+                <div class="input-group"><label for="buyPriceG">매수 가격 (달러, USD)</label><input type="text" inputmode="decimal" id="buyPriceG" placeholder="예: 100" oninput="autoFormat(this)"></div>
+                <div class="input-group"><label for="sellPriceG">매도 가격 (달러, USD)</label><input type="text" inputmode="decimal" id="sellPriceG" placeholder="예: 110" oninput="autoFormat(this)"></div>
+                <div class="input-group"><label for="quantityG">수량 (주)</label><input type="text" inputmode="numeric" id="quantityG" placeholder="예: 10" oninput="autoFormat(this)"></div>
             </div>
 
-            <button id="calculate" onclick="calculateProfit('global')">손익 계산하기</button>
+            <button class="calculate-btn" onclick="calculateProfit('global')">손익 계산하기</button>
         </div>
 
+        <!-- [수정] 같은 id="result"가 하나 더 있던 빈 div는 쓰이지 않아서 삭제 -->
         <div id="result" class="result">
             <p>여기에 계산 결과가 표시됩니다.</p>
         </div>
-        
-        <div class="result-container">
-            <div id="result">
-                </div>
-        </div>
-        
+
     </div>
 
     <script>
@@ -417,8 +465,32 @@
             return num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
 
-        // 페이지가 닫힐 때까지 계산 기록을 저장할 배열
+        // 계산 기록을 저장할 배열
         let calculationHistory = [];
+
+        // [추가] 계산 기록을 브라우저의 localStorage에 저장해서 새로고침하거나 다시 접속해도 남도록 함.
+        // localStorage는 "이 브라우저 + 이 사이트"에만 저장됨 (다른 기기·다른 브라우저와는 공유되지 않음).
+        const HISTORY_STORAGE_KEY = 'stockCalculator.history';
+
+        // 저장된 기록 불러오기
+        function loadSavedHistory() {
+            try {
+                const saved = localStorage.getItem(HISTORY_STORAGE_KEY);
+                calculationHistory = saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                // 시크릿 모드 등 저장소를 쓸 수 없거나, 저장된 값이 깨진 경우
+                calculationHistory = [];
+            }
+        }
+
+        // 현재 기록을 저장소에 쓰기
+        function persistHistory() {
+            try {
+                localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(calculationHistory));
+            } catch (e) {
+                // 저장 실패해도 계산 기능은 그대로 동작하도록 무시
+            }
+        }
 
         /**
          * 계산 결과를 calculationHistory 배열에 저장하고 화면에 표시합니다.
@@ -427,12 +499,14 @@
          * @param {string} resultText - 계산 결과 요약 텍스트
          */
         function saveHistory(type, data, resultText) {
-            var timeOption = { hour: "numeric", minute: "numeric", second: "numeric", hour12: false };
+            // [수정] 기록이 날짜를 넘어서도 남으므로 날짜(월/일)도 함께 표시
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
             const historyItem = {
                 type: type,
                 data: data,
                 summary: resultText.substring(0, 50), // + '...' 요약 텍스트
-                timestamp: new Date().toLocaleTimeString('en-US', timeOption)
+                timestamp: `${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
             };
 
             // 배열에 추가 (가장 최근 항목이 위로 오도록 prepend)
@@ -445,6 +519,7 @@
             }
             */
 
+            persistHistory(); // [추가] 브라우저에 저장
             renderHistory(); // 화면 업데이트
         }
 
@@ -460,7 +535,7 @@
                 
                 // 표시할 텍스트: [시간] [국내/해외] 요약
                 const typeText = item.type === 'domestic' ? '🇰🇷국내' : '🌎해외';
-                listItem.innerHTML = `[${item.timestamp}] ${typeText} | ${item.summary}`;
+                listItem.textContent = `[${item.timestamp}] ${typeText} | ${item.summary}`;
                 
                 // 클릭 시 불러오기 함수 연결
                 listItem.onclick = () => loadHistory(index);
@@ -503,13 +578,17 @@
                 { id: 'taxRateG', value: data.taxRateG },
                 { id: 'taxBaseG', value: data.taxBaseG },
                 { id: 'exchangeRateG', value: data.exchangeRateG },
+                { id: 'exchangeRateBuyG', value: data.exchangeRateBuyG },
             ];
 
             fields.forEach(field => {
                 const inputElement = document.getElementById(field.id);
-                if (inputElement && field.value !== undefined) {
+                if (inputElement) {
+                    // [수정] 빈 칸이었던 값은 저장될 때 NaN(또는 저장소에서 null)이 되므로 빈 문자열로 되돌림.
+                    // 예전 기록처럼 값 자체가 없는 경우(undefined)도 빈 칸으로 처리.
+                    const isEmpty = field.value === undefined || field.value === null || Number.isNaN(field.value);
                     // 값에 쉼표가 있었다면 포맷팅을 위해 autoFormat 함수를 수동 호출 (입력 필드에만 해당)
-                    inputElement.value = String(field.value); // 순수한 값 먼저 할당
+                    inputElement.value = isEmpty ? '' : String(field.value); // 순수한 값 먼저 할당
 
                     // 가격, 환율, 공제와 같이 쉼표가 필요한 필드에만 autoFormat 적용
                     if (field.id.includes('Price') || field.id.includes('quantity') || field.id.includes('exchangeRate') || field.id.includes('taxBase')) {
@@ -525,14 +604,20 @@
          * 계산 기록을 완전히 지웁니다.
          */
         function clearHistory() {
+            // [추가] 이제 기록이 브라우저에 저장되므로, 실수로 지우지 않도록 한 번 확인
+            if (calculationHistory.length > 0 && !confirm('계산 기록을 모두 지울까요?')) {
+                return;
+            }
             calculationHistory = [];
+            persistHistory();
             renderHistory();
         }
 
         // 손익 계산 메인 함수
         function calculateProfit(type, isSaveHistory = true) {
             const resultDiv = document.getElementById('result');
-            let buyPrice, sellPrice, quantity, commRate, taxRate, currencyUnit, taxName, taxBase, exchangeRate;
+            let buyPrice, sellPrice, quantity, commRate, taxRate, currencyUnit, taxName, taxBase, exchangeRate, exchangeRateBuy;
+            let summaryBuyText; // 기록 목록에 보여줄 매수 가격 (해외는 달러 그대로 표시)
 
             // 1. 입력 값 가져오기
             if (type === 'domestic') {
@@ -543,6 +628,7 @@
                 taxRate = parseFloat(document.getElementById('taxRateD').value) / 100; // % -> 소수
                 currencyUnit = '원';
                 taxName = '거래세';
+                summaryBuyText = `${formatNumber(buyPrice)}원`;
             } else if (type === 'global') {
                 buyPrice = parseFloat(document.getElementById('buyPriceG').value.replace(/,/g, ''));
                 sellPrice = parseFloat(document.getElementById('sellPriceG').value.replace(/,/g, ''));
@@ -550,13 +636,21 @@
                 exchangeRate = parseFloat(document.getElementById('exchangeRateG').value.replace(/,/g, ''));
                 commRate = parseFloat(document.getElementById('commRateG').value) / 100; // % -> 소수
                 taxRate = parseFloat(document.getElementById('taxRateG').value) / 100; // % -> 소수 (양도소득세)
-                taxBase = parseInt(document.getElementById('taxBaseG').value.replace(/,/g, '')); // 기본 공제
+                taxBase = parseInt(document.getElementById('taxBaseG').value.replace(/,/g, '')) || 0; // 기본 공제 (빈 칸이면 0)
                 currencyUnit = '원';
                 taxName = '양도소득세';
 
+                // [추가] 매수 시 환율. 비어 있으면 매도 시 환율과 같다고 보고 계산
+                exchangeRateBuy = parseFloat(document.getElementById('exchangeRateBuyG').value.replace(/,/g, ''));
+                if (!exchangeRateBuy) exchangeRateBuy = exchangeRate;
+
+                // 기록 목록에는 원화로 바꾸기 전의 달러 가격을 표시
+                summaryBuyText = `$${buyPrice.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+
                 // 달러 금액을 원화로 환산 (계산을 원화 기준으로 진행)
+                // [수정] 세법상 취득가액은 매수일 환율, 양도가액은 매도일 환율로 각각 환산함
                 if (exchangeRate) {
-                    buyPrice *= exchangeRate;
+                    buyPrice *= exchangeRateBuy;
                     sellPrice *= exchangeRate;
                 } else {
                     alert('환율을 입력해 주세요.');
@@ -588,8 +682,10 @@
                 netProfitLoss = profitLossBeforeTax - tax;
             } else if (type === 'global') {
                 // 해외 주식: 양도소득세 (이익 발생 시)
-                const capitalGain = totalSell - totalBuy; // 양도차익 (매매 차익)
-                
+                // [수정] 양도차익 = 매도 금액 - 매수 금액 - 필요경비(매수·매도 수수료)
+                // 예전에는 수수료를 빼지 않아서 세금이 조금 더 많이 계산되었음
+                const capitalGain = profitLossBeforeTax;
+
                 if (capitalGain > 0) {
                     // 기본 공제 적용 후 과세 표준 계산
                     let taxableIncome = capitalGain - taxBase;
@@ -624,7 +720,13 @@
             `;
             
             if (type === 'global') {
-                resultHTML += `<p style="font-size:0.9em; margin-top:10px;">(양도소득세 기본 공제 ${formatNumber(taxBase)}원이 적용된 가격입니다.)</p>`;
+                const rateText = exchangeRateBuy === exchangeRate
+                    ? `${formatNumber(exchangeRate)}원/USD`
+                    : `매수 ${formatNumber(exchangeRateBuy)} → 매도 ${formatNumber(exchangeRate)}원/USD`;
+                resultHTML += `
+                    <p class="note">적용 환율: ${rateText}</p>
+                    <p class="note">(양도소득세 기본 공제 ${formatNumber(taxBase)}원이 적용된 금액입니다.
+                    기본 공제는 1년에 한 번만 적용되므로, 올해 다른 해외주식 매매 손익이 있으면 실제 세금은 달라질 수 있어요.)</p>`;
             }
 
             resultDiv.innerHTML = resultHTML;
@@ -645,11 +747,12 @@
                     commRateG: parseFloat(document.getElementById('commRateG').value),  // 해외 수수료
                     taxRateG: parseFloat(document.getElementById('taxRateG').value),    // 해외 세금
                     taxBaseG: parseInt(document.getElementById('taxBaseG').value.replace(/,/g, '')),
-                    exchangeRateG: parseFloat(document.getElementById('exchangeRateG').value.replace(/,/g, '')), // 환율
+                    exchangeRateG: parseFloat(document.getElementById('exchangeRateG').value.replace(/,/g, '')), // 매도 시 환율
+                    exchangeRateBuyG: parseFloat(document.getElementById('exchangeRateBuyG').value.replace(/,/g, '')), // 매수 시 환율
                 };
 
                 // **[핵심 추가] 계산 결과를 저장**
-                const summaryText = `매수: ${formatNumber(buyPrice)}${currencyUnit} | 수량: ${formatNumber(quantity)}`;
+                const summaryText = `매수: ${summaryBuyText} | 수량: ${formatNumber(quantity)}`;
 
                 // 최종적으로 결과 창에 HTML을 출력하는 코드입니다.
                 resultDiv.innerHTML = resultHTML; // (기존 코드)
@@ -663,6 +766,8 @@
         // 페이지 로드 시 국내 주식 탭이 보이도록 설정
         document.addEventListener('DOMContentLoaded', () => {
             openTab('domestic');
+            loadSavedHistory(); // [추가] 브라우저에 저장된 계산 기록 불러오기
+            renderHistory();
         });
     </script>
 </body>
