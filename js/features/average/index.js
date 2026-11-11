@@ -73,14 +73,38 @@ function renderResult(el, r, { onSave }) {
     const arrow = dir === 'up' ? '▲' : dir === 'down' ? '▼' : '';
     const skipped = r.skippedCount
         ? `<p class="note">매수가나 수량이 비어 있는 ${r.skippedCount}건은 빼고 계산했어요.</p>` : '';
+
+    // 매수 내역 한 줄: 이름·금액 / 단가×수량·비중 / 비중 막대
+    const line = ({ name, price, qty, cost, share, after, tone }) => `
+        <li class="buy-line">
+            <div class="buy-line-top"><span>${name}</span><b>${won(cost)}원</b></div>
+            <div class="buy-line-sub">
+                <span>${won(price)}원 × ${won(qty)}주 · ${share.toFixed(1)}%</span>
+                ${after ? `<span>${after}</span>` : ''}
+            </div>
+            <span class="share-bar ${tone}"><i style="width:${Math.max(share, 0.5).toFixed(2)}%"></i></span>
+        </li>`;
+    // 여러 건이면 차수마다 "그때까지 산 평단"을 함께 보여줘요 (한 건이면 위의 새 평단과 같아서 생략)
+    const showAfter = r.steps.length > 1;
+    const lines = [
+        line({ name: '기존 보유', price: r.avgPrice, qty: r.holdQty, cost: r.holdCost, share: r.holdShare, tone: 'hold' }),
+        ...r.steps.map(s => line({
+            name: `${s.no}차 추가 매수`, price: s.price, qty: s.qty, cost: s.cost, share: s.share, tone: 'add',
+            after: showAfter ? `평단 ${won(s.avgAfter)}원` : '',
+        })),
+    ].join('');
+
     el.innerHTML = `
         <div class="result-label">새 평균 단가</div>
         <div class="result-amount">${won(r.newAvg)}<small>원</small></div>
         <span class="rate-pill pill-${dir}">${arrow} ${won(Math.abs(r.change))}원 (${Math.abs(r.changeRate).toFixed(2)}%)</span>
+
+        <h3 class="sub-title">매수 내역</h3>
+        <ul class="buy-lines">${lines}</ul>
         <ul class="rows">
+            <li><span>추가 매수 합계 (${r.usedCount}건)</span><span>${won(r.addQty)}주 · ${won(r.addCost)}원</span></li>
+            <li class="divider"><span>총 매수 금액</span><span>${won(r.totalCost)}원</span></li>
             <li><span>총 보유 수량</span><span>${won(r.totalQty)}주</span></li>
-            <li><span>추가 매수 (${r.usedCount}건)</span><span>${won(r.addQty)}주 · ${won(r.addCost)}원</span></li>
-            <li><span>총 매수 금액</span><span>${won(r.totalCost)}원</span></li>
         </ul>
         ${skipped}
         <p class="note">수수료는 빼고 계산한 단순 평균이에요. 증권사 앱의 평단과 몇 원 다를 수 있어요.</p>

@@ -568,6 +568,47 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
 .rows li.sub span:last-child { color: var(--text-2); font-weight: 500; }
 .rows li.divider { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 12px; }
 
+/* 물타기: 매수 내역 (기존 보유 / 1차 / 2차 …) */
+.sub-title {
+    margin: 22px 0 6px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text-3);
+}
+.buy-lines { margin: 0; padding: 0; list-style: none; }
+.buy-line { padding: 9px 0; border-bottom: 1px dashed var(--border); }
+.buy-line:last-child { border-bottom: 0; }
+.buy-line-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.9375rem;
+    color: var(--text-2);
+}
+.buy-line-top b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.buy-line-sub {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+    margin-top: 2px;
+    font-size: 0.75rem;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+}
+.share-bar {
+    display: block;
+    height: 4px;
+    margin-top: 6px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    overflow: hidden;
+}
+.share-bar i { display: block; height: 100%; border-radius: inherit; }
+.share-bar.hold i { background: var(--text-3); }
+.share-bar.add i { background: var(--primary); }
+.buy-lines + .rows { margin-top: 10px; }
+
 .breakdown { margin-top: 8px; }
 .breakdown summary {
     padding: 10px 0;
