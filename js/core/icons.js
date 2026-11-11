@@ -1,0 +1,21 @@
+/**
+ * icons.js — 메뉴와 홈 카드에 쓰는 선 아이콘 (SVG)
+ *
+ * 이미지 파일 대신 SVG 코드를 쓰면 글자색(currentColor)을 따라가서
+ * 다크 모드나 선택 상태에 맞게 색이 저절로 바뀌어요.
+ */
+const PATHS = {
+    home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+    profit: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    average: '<path d="M4 20h16"/><path d="M6 16V9M10 16V5M14 16v-6M18 16V8"/>',
+    target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".5"/>',
+    dividend: '<circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5c0-1 1-1.6 2.5-1.6s2.5.7 2.5 1.7-1 1.4-2.5 1.7-2.5.8-2.5 1.8 1 1.7 2.5 1.7 2.5-.6 2.5-1.6"/>',
+    fx: '<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
+    menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+};
+
+/** @param {keyof PATHS} name @param {number} size */
+export function icon(name, size = 20) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[name] ?? ''}</svg>`;
+}

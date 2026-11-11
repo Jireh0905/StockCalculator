@@ -4,7 +4,7 @@
  * 계산 결과 객체(calculator.js가 만든 것)를 받아서 HTML로 보여주기만 해요.
  * 계산은 하지 않아요. "계산"과 "보여주기"를 나누는 게 이번 단계의 핵심이에요.
  */
-import { won, signedWon, percent } from './format.js';
+import { won, signedWon, percent } from '../../core/format.js';
 
 /**
  * @param {HTMLElement} container - 결과를 그릴 영역

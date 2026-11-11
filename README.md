@@ -1,34 +1,62 @@
-# 주식 손익 계산기
+# 주식 도구 모음
 
-국내·해외 주식의 수수료와 세금을 반영해서 매매 손익을 계산하는 웹앱이에요.
+주식 손익 계산기를 시작으로, 여러 주식 계산 도구를 한곳에서 쓰는 웹앱이에요.
 
 배포 주소: https://jireh0905.github.io/StockCalculator/
+
+- 첫 화면(홈)에서 기능을 고르고, 왼쪽 메뉴로 언제든 다른 기능으로 바꿀 수 있어요.
+- 기능마다 고유 주소가 있어요. 예) `…/StockCalculator/#/average` → 물타기 계산기
+- 입력값과 계산 기록은 **창(탭)이 열려 있는 동안만** 남아요. 다른 기능으로 이동하거나 새로고침해도 그대로이고,
+  탭을 닫고 다시 접속하면 처음 상태로 시작해요. 메뉴 아래 "지금 모두 초기화"로 바로 지울 수도 있어요.
 
 ## 폴더 구조
 
 ```
-index.html          화면의 뼈대 (HTML)
+index.html              모든 화면이 함께 쓰는 틀 (왼쪽 메뉴, 상단 바, 기록 시트)
 css/
-  style.css         화면 꾸미기 (색상·배치·다크 모드)
+  style.css             화면 꾸미기 (색상·배치·다크 모드)
 js/
-  main.js           시작점: 상태 관리와 모듈 연결
-  calculator.js     계산 공식 (화면과 무관한 순수 함수)
-  format.js         숫자 포맷 (쉼표, 원화, 퍼센트)
-  form.js           입력칸 읽기·채우기·자동 쉼표
-  result-view.js    결과 카드 그리기
-  history-view.js   계산 기록 시트 그리기
-  storage.js        브라우저(localStorage)에 기록 저장
-  toast.js          하단 알림
-serve.py            로컬 개발용 웹 서버 (2단계에서 Vite로 대체 예정)
+  app.js                시작점: 라우터(주소 → 화면), 공통 틀 연결
+  features.js           기능 목록 (여기에 추가하면 메뉴·홈에 자동 표시)
+  home.js               첫 화면: 기능 카드 + 이번 방문 기록
+  shell/                공통 틀의 부품
+    drawer.js             왼쪽 메뉴
+    history-sheet.js      계산 기록 시트
+    record-item.js        기록 한 줄 (시트·홈 공용)
+  core/                 모든 기능이 함께 쓰는 도구
+    session.js            이번 방문 동안의 저장소 (sessionStorage)
+    number-input.js       숫자 입력칸: 자동 쉼표, 값 읽기·채우기
+    format.js             숫자 포맷 (쉼표, 원화, 퍼센트)
+    icons.js              메뉴·카드 아이콘
+    toast.js              하단 알림
+  features/             기능 하나 = 폴더 하나
+    profit/               손익 계산기 (template·calculator·result-view·index)
+    average/              물타기 계산기
+    target/               목표가 계산기
+serve.py                로컬 개발용 웹 서버 (2단계에서 Vite로 대체 예정)
 ```
 
-데이터 흐름:
+화면이 바뀌는 흐름:
 
 ```
-입력칸 ──(form.js)──▶ 입력값 ──(calculator.js)──▶ 결과 ──(result-view.js)──▶ 화면
-                                                    │
-                                     기록에 저장 ───┴──(storage.js)──▶ localStorage
+메뉴·카드 클릭 → 주소가 #/average로 바뀜 → app.js의 render()
+   → features.js에서 'average' 기능을 찾음 → 그 기능의 mount()가 가운데 화면을 그림
 ```
+
+계산 흐름 (기능 하나 안에서):
+
+```
+입력칸 ──(number-input.js)──▶ 입력값 ──(calculator.js)──▶ 결과 ──(화면 그리기)──▶ 화면
+   │                                                      │
+   └── 글자 입력할 때마다 ──┐            기록에 저장 ───┘
+                            ▼                  ▼
+                     core/session.js  →  sessionStorage
+```
+
+## 새 기능 추가하는 법
+
+1. `js/features/<id>/` 폴더를 만들고 `average/`를 본떠 `index.js`(화면+연결)와 `calculator.js`(계산)를 만들어요.
+2. `js/features.js`에서 import하고 `FEATURES` 목록에 넣어요. 끝 — 메뉴와 홈 카드에 저절로 나타나요.
 
 ## 로컬에서 실행하기
 
@@ -54,6 +82,7 @@ py serve.py
 ## 공부 단계
 
 1. ✅ 파일 분리와 모듈화
+   - ✅ 1.5 여러 기능 앱으로 확장 (SPA 라우터, 왼쪽 메뉴, 세션 저장소)
 2. 개발 도구 도입 (Node.js, npm, Vite, 자동 배포)
 3. 테스트와 TypeScript
 4. React로 전환하고 계산기 늘리기

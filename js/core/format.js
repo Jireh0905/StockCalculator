@@ -27,11 +27,10 @@ export function percent(ratio) {
     return (ratio * 100).toFixed(3).replace(/\.?0+$/, '') + '%';
 }
 
-/** 기록용 짧은 날짜·시간: "11/10 14:32:05" */
-export function shortDateTime(date) {
+/** 기록용 시각: "14:32" (기록은 창을 닫으면 사라지니 날짜는 생략) */
+export function clockTime(date) {
     const p = (n) => String(n).padStart(2, '0');
-    return `${p(date.getMonth() + 1)}/${p(date.getDate())} `
-         + `${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;
+    return `${p(date.getHours())}:${p(date.getMinutes())}`;
 }
 
 /** "1,234.5" 같은 입력 문자열을 숫자로. 빈 칸이면 NaN */

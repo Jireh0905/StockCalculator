@@ -53,25 +53,268 @@ body {
 }
 button { font: inherit; color: inherit; }
 
-.app {
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 16px 16px 48px;
-}
+/* =========================================================
+ * 앱의 틀: 왼쪽 메뉴 + 상단 바 + 가운데 화면
+ * ========================================================= */
 
-/* ---------- 상단 헤더 ---------- */
-.app-header {
+/* ---------- 상단 바 ---------- */
+.appbar {
+    position: sticky;          /* 스크롤해도 위에 붙어 있음 */
+    top: 0;
+    z-index: 20;
+    height: 56px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 8px 4px 16px;
+    gap: 8px;
+    padding: 0 12px 0 8px;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
 }
-.app-header h1 {
-    margin: 0;
-    font-size: 1.25rem;
+.appbar h1 {
+    flex: 1;
+    min-width: 0;
+    margin: 0 0 0 4px;
+    font-size: 1.125rem;
     font-weight: 700;
     letter-spacing: -0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    display: grid;
+    place-items: center;
+    color: var(--text-2);
+    cursor: pointer;
+}
+.icon-btn:hover { background: var(--border); }
+.session-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-3);
+    white-space: nowrap;
+}
+.session-chip i { width: 6px; height: 6px; border-radius: 50%; background: #40c057; }
+/* 홈에서는 "임시 저장 중" 표시, 기능 화면에서는 "기록" 버튼 (app.js가 body에 data-page를 붙여줌) */
+body[data-page="home"] .history-btn,
+body[data-page="feature"] .session-chip { display: none; }
+
+/* ---------- 왼쪽 메뉴 (휴대폰: 서랍) ---------- */
+.drawer {
+    position: fixed;
+    z-index: 40;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 264px;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    overflow-y: auto;
+    background: var(--surface);
+    transform: translateX(-100%);   /* 평소에는 화면 왼쪽 밖에 숨어 있음 */
+    visibility: hidden;
+    transition: transform .25s ease, visibility .25s;
+    box-shadow: 4px 0 24px rgba(0,0,0,.08);
+}
+body.drawer-open .drawer { transform: none; visibility: visible; }
+.scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(0,0,0,.35);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .25s, visibility .25s;
+}
+body.drawer-open .scrim { opacity: 1; visibility: visible; }
+
+.drawer-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 8px 16px;
+    color: var(--text);
+    text-decoration: none;
+}
+.drawer-head b { font-size: 1rem; }
+.logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: var(--primary);
+    color: #fff;
+}
+.nav-group {
+    margin: 12px 12px 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-3);
+}
+.nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 12px;
+    color: var(--text-2);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+.nav a:hover { background: var(--surface-2); }
+.nav a[aria-current="page"] { background: var(--primary-weak); color: var(--primary); }
+.nav a.disabled { opacity: .5; pointer-events: none; }
+.nav a .soon { margin-left: auto; font-size: 0.6875rem; font-weight: 500; color: var(--text-3); }
+.drawer-foot {
+    margin-top: auto;
+    padding: 16px 8px 4px;
+    border-top: 1px solid var(--border);
+}
+.drawer-foot p {
+    margin: 0 0 10px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--text-3);
+}
+.ghost-btn {
+    width: 100%;
+    height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-2);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ghost-btn:hover { background: var(--surface-2); }
+
+/* ---------- 넓은 화면: 메뉴가 항상 펼쳐진 사이드바 ---------- */
+@media (min-width: 960px) {
+    .drawer {
+        transform: none;
+        visibility: visible;
+        box-shadow: none;
+        border-right: 1px solid var(--border);
+    }
+    .scrim, .menu-btn { display: none; }
+    .shell { margin-left: 264px; }
+    .appbar { padding-left: 24px; }
+}
+
+/* ---------- 가운데 화면 ---------- */
+.content {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 4px 16px 48px;
+    container-type: inline-size;   /* 아래 @container가 "이 영역의 너비"를 기준으로 판단 */
+}
+.page { animation: page-in .2s ease; }   /* 화면이 바뀔 때 살짝 떠오르는 효과 */
+@keyframes page-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* =========================================================
+ * 홈 화면
+ * ========================================================= */
+.home { max-width: 640px; margin: 0 auto; }
+.hello { margin: 12px 4px 8px; }
+.hello h2 { margin: 0 0 4px; font-size: 1.375rem; letter-spacing: -0.02em; }
+.hello p { margin: 0; font-size: 0.875rem; color: var(--text-3); }
+.section-title {
+    margin: 24px 4px 10px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-3);
+}
+.section-note { margin-left: 6px; font-weight: 400; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tile {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 132px;
+    padding: 16px;
+    border: 1.5px solid transparent;
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    color: var(--text);
+    text-decoration: none;
+    transition: border-color .15s, transform .15s;
+}
+.tile:hover { border-color: var(--primary); }
+.tile:active { transform: scale(.98); }
+.tile.wide { grid-column: span 2; flex-direction: row; align-items: center; min-height: 0; }
+.tile.disabled { opacity: .55; pointer-events: none; box-shadow: none; }
+.tile-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+}
+.tile-text b { font-size: 0.9375rem; }
+.tile-desc {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--text-3);
+}
+.tag {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--text-3);
+    vertical-align: 1px;
+}
+/* 아이콘 배경색 */
+.c1 { background: var(--up-weak); color: var(--up); }
+.c2 { background: var(--primary-weak); color: var(--primary); }
+.c3 { background: #fff4e6; color: #f08c00; }
+.c4 { background: #ebfbee; color: #2f9e44; }
+.c5 { background: var(--surface-2); color: var(--text-3); }
+@media (prefers-color-scheme: dark) {
+    .c3 { background: #3a2a14; }
+    .c4 { background: #16301c; }
+}
+.records-card { padding: 8px 4px; }
+.records-card .history-list { padding: 0 8px; }
+.records-card .history-item:last-child { border-bottom: 0; }
+
+/* =========================================================
+ * 계산기 공통
+ * ========================================================= */
+.layout { max-width: 480px; margin: 0 auto; }
+.card-title {
+    margin: 0 0 12px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text-2);
+}
+.card-title:not(:first-child) { margin-top: 8px; }
+
 .history-btn {
     display: inline-flex;
     align-items: center;
@@ -273,6 +516,10 @@ button { font: inherit; color: inherit; }
 .is-up   .rate-pill { color: var(--up);   background: var(--up-weak); }
 .is-down .rate-pill { color: var(--down); background: var(--down-weak); }
 .is-flat .rate-pill { color: var(--text-2); background: var(--surface-2); }
+/* 금액 색은 그대로 두고 배지만 색을 줄 때 */
+.rate-pill.pill-up   { color: var(--up);   background: var(--up-weak); }
+.rate-pill.pill-down { color: var(--down); background: var(--down-weak); }
+.rate-pill.pill-flat { color: var(--text-2); background: var(--surface-2); }
 
 .rows { margin: 20px 0 0; padding: 0; list-style: none; }
 .rows li {
@@ -338,7 +585,7 @@ button { font: inherit; color: inherit; }
     opacity: 0;
     visibility: hidden;
     transition: opacity .25s, visibility .25s;
-    z-index: 10;
+    z-index: 45;   /* 메뉴(40)보다 위 */
 }
 .sheet {
     position: fixed;
@@ -354,7 +601,7 @@ button { font: inherit; color: inherit; }
     transform: translate(-50%, 100%);
     visibility: hidden;
     transition: transform .3s cubic-bezier(.2,.8,.2,1), visibility .3s;
-    z-index: 11;
+    z-index: 46;
 }
 body.sheet-open .backdrop { opacity: 1; visibility: visible; }
 body.sheet-open .sheet { transform: translate(-50%, 0); visibility: visible; }
@@ -405,6 +652,7 @@ body.sheet-open .sheet { transform: translate(-50%, 0); visibility: visible; }
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
+.history-item .pl-sub { display: block; font-size: 0.75rem; font-weight: 500; color: var(--text-3); }
 .history-item .pl.up { color: var(--up); }
 .history-item .pl.down { color: var(--down); }
 .history-item .del {
@@ -432,24 +680,26 @@ body.sheet-open .sheet { transform: translate(-50%, 0); visibility: visible; }
     opacity: 0;
     transition: opacity .2s, transform .2s;
     pointer-events: none;
-    z-index: 20;
+    z-index: 60;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* ---------- 키보드로 이동할 때만 포커스 테두리 표시 ---------- */
-button:focus-visible, summary:focus-visible {
+button:focus-visible, summary:focus-visible, a:focus-visible, .history-item:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
 }
 
-/* ---------- PC 화면: 입력(왼쪽) + 결과(오른쪽) 2단 배치 ---------- */
-@media (min-width: 880px) {
-    .app { max-width: 920px; padding-top: 32px; }
+/* ---------- 넓을 때: 입력(왼쪽) + 결과(오른쪽) 2단 배치 ----------
+ * @media는 "브라우저 창" 너비, @container는 "가운데 화면 영역" 너비를 봐요.
+ * 왼쪽 메뉴가 고정되면 같은 창 너비라도 계산기 자리가 좁아지므로 @container가 더 정확해요. */
+@container (min-width: 760px) {
     .layout {
+        max-width: 920px;
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 20px;
         align-items: start;
     }
-    .result-col { position: sticky; top: 20px; }
+    .result-col { position: sticky; top: 72px; }   /* 상단 바(56px) 아래에 붙음 */
 }
