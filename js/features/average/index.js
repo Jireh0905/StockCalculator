@@ -9,7 +9,8 @@
  */
 import { calculateAverage } from './calculator.js';
 import { bindNumberInputs, readValues, fillValues, readNumber, readInt } from '../../core/number-input.js';
-import { won, signedWon } from '../../core/format.js';
+import { won, wonPrecise, signedWon } from '../../core/format.js';
+import { showReceived } from '../../core/received.js';
 
 const MAX_BUYS = 10;
 
@@ -142,6 +143,21 @@ export default {
     icon: 'average',
     color: 'c2',
 
+    /**
+     * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 하락 대응 → "물타기 계산")
+     * 보유 주식과 추가 매수를 받은 값으로 통째로 바꿔요. (기존 추가 매수 줄은 받은 단계들로 바뀌어요)
+     *
+     * @param {object | null} inputs - 지금 저장된 입력값 (이 기능에서는 쓰지 않아요)
+     * @param {{ avgPrice: number, holdQty: number, buys: Array<{ price: number, qty: number }> }} payload
+     * @returns 새 입력값 (ctx.inputs와 같은 모양)
+     */
+    receive(inputs, { avgPrice, holdQty, buys }) {
+        return {
+            values: { avgPrice: wonPrecise(avgPrice), holdQty: won(holdQty) },
+            buys: buys.slice(0, MAX_BUYS).map(b => ({ buyPrice: wonPrecise(b.price), buyQty: won(b.qty) })),
+        };
+    },
+
     mount(view, ctx) {
         view.innerHTML = template;
         const holdEl = view.querySelector('[data-hold]');
@@ -231,5 +247,12 @@ export default {
         });
         bindNumberInputs(view, changed);
         refresh();
+
+        // 다른 기능에서 값을 받아 들어왔으면: 바뀐 칸을 강조하고 무엇이 들어왔는지 알려줘요
+        if (ctx.received) {
+            const { from, payload } = ctx.received;
+            showReceived(view, ['avgPrice', 'holdQty', 'buyPrice', 'buyQty'],
+                `${from?.shortName ?? '다른 계산기'} 계획의 추가 매수 ${payload.buys.length}건을 넣었어요`);
+        }
     },
 };

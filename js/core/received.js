@@ -9,14 +9,15 @@ import { showToast } from './toast.js';
 /**
  * @param {HTMLElement} view - 기능 화면
  * @param {string[]} names - 강조할 입력칸 name 목록 (예: ['buyPriceD', 'quantityD'])
+ *                          같은 name이 여러 줄에 있으면 (물타기 추가 매수 줄처럼) 모두 강조해요
  * @param {string} message - 알림 문구
  */
 export function showReceived(view, names, message) {
     names.forEach(name => {
-        const input = view.querySelector(`input[name="${name}"]`);
-        if (!input) return;
-        input.classList.add('flash');
-        input.addEventListener('animationend', () => input.classList.remove('flash'), { once: true });
+        view.querySelectorAll(`input[name="${name}"]`).forEach(input => {
+            input.classList.add('flash');
+            input.addEventListener('animationend', () => input.classList.remove('flash'), { once: true });
+        });
     });
     showToast(message);
 }

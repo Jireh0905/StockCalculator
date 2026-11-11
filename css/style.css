@@ -295,9 +295,11 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
 .c3 { background: #fff4e6; color: #f08c00; }
 .c4 { background: #ebfbee; color: #2f9e44; }
 .c5 { background: var(--surface-2); color: var(--text-3); }
+.c6 { background: #f3f0ff; color: #7048e8; }
 @media (prefers-color-scheme: dark) {
     .c3 { background: #3a2a14; }
     .c4 { background: #16301c; }
+    .c6 { background: #2a2244; color: #9775fa; }
 }
 .records-card { padding: 8px 4px; }
 .records-card .history-list { padding: 0 8px; }
@@ -569,6 +571,7 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     text-align: right;
+    white-space: nowrap;   /* 금액이 두 줄로 쪼개지지 않게 (긴 건 왼쪽 이름이 줄바꿈) */
 }
 .rows li.sub { font-size: 0.8125rem; color: var(--text-3); padding: 3px 0 3px 12px; }
 .rows li.sub span:last-child { color: var(--text-2); font-weight: 500; }
@@ -615,6 +618,63 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
 .share-bar.add i { background: var(--primary); }
 .buy-lines + .rows { margin-top: 10px; }
 .money-lines { margin-top: 16px; }
+
+/* 하락 대응 계산기 */
+.field-optional {
+    margin-left: 4px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--text-3);
+}
+.result-amount-text { font-size: 1.625rem; }       /* 숫자 대신 "만들 수 없어요" 같은 문장 */
+.rows.rows-tight { margin-top: 0; }
+.rows li span.tone-ok { color: var(--primary); }
+.rows li span.tone-warn { color: var(--up); }
+.rows li span.tone-up { color: var(--up); }
+.rows li span.tone-down { color: var(--down); }
+.tag-warn { color: var(--up); font-weight: 700; }
+.panel-extra { margin-top: 16px; }
+/* 분할 매수 단계 줄 아래: "→ 30주 · 1,320,000원 · 평단 48,000원" 또는 안 되는 이유 */
+.step-result {
+    margin: -4px 0 4px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--primary);
+    font-variant-numeric: tabular-nums;
+}
+.step-result:empty { display: none; }
+.step-result.is-warn { color: var(--up); font-weight: 500; }
+/* 그대로 보유 / 물타기 / 손절 후 재매수 비교표 */
+.compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    table-layout: fixed;
+}
+.compare-table th, .compare-table td { padding: 8px 4px; text-align: right; word-break: keep-all; }
+.compare-table thead th { font-size: 0.75rem; font-weight: 600; color: var(--text-3); vertical-align: bottom; }
+.compare-table tbody th { text-align: left; font-weight: 500; color: var(--text-2); }
+.compare-table tbody td { font-weight: 600; color: var(--text); }
+.compare-table tbody tr + tr { border-top: 1px solid var(--border); }
+.compare-table th:first-child { width: 26%; }
+.compare-table .is-current { background: var(--primary-weak); color: var(--primary); }
+.compare-table thead .is-current { border-radius: 8px 8px 0 0; }
+.compare-table tbody tr:last-child .is-current { border-radius: 0 0 8px 8px; }
+.risk-list {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--text-3);
+}
+.risk-list li + li { margin-top: 4px; }
+.risk-list b { margin-right: 4px; color: var(--text-2); }
+.link-row.single { grid-template-columns: 1fr; }
 
 .breakdown { margin-top: 8px; }
 .breakdown summary {

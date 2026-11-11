@@ -8,6 +8,8 @@ const PATHS = {
     home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
     profit: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
     average: '<path d="M4 20h16"/><path d="M6 16V9M10 16V5M14 16v-6M18 16V8"/>',
+    // 하락 대응: 내려가던 주가가 갈림길에서 나뉘는 모양 (물타기 / 손절 후 재매수)
+    plan: '<path d="M3 5l6 6"/><path d="M9 11l5 7h7"/><path d="M9 11l5-4h7"/>',
     target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".5"/>',
     dividend: '<circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5c0-1 1-1.6 2.5-1.6s2.5.7 2.5 1.7-1 1.4-2.5 1.7-2.5.8-2.5 1.8 1 1.7 2.5 1.7 2.5-.6 2.5-1.6"/>',
     fx: '<path d="M4 8h13l-3-3M20 16H7l3 3"/>',

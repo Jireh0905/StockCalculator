@@ -18,10 +18,12 @@
 import profit from './features/profit/index.js';
 import average from './features/average/index.js';
 import target from './features/target/index.js';
+import plan from './features/plan/index.js';
 
 export const FEATURES = [
     profit,
     average,
+    plan,   // 물타기·손절 계획이라 물타기 바로 아래에
     target,
     // 아직 만들지 않은 기능: mount가 없고 soon: true → 메뉴에 "준비 중"으로 보여요
     { id: 'dividend', name: '배당금 계산기', desc: '세금 뺀 실제 배당금', group: '계산기', icon: 'dividend', color: 'c4', soon: true },
