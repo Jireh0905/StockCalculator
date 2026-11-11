@@ -179,6 +179,11 @@ export default {
                         buyPrice: Math.round(r.newAvg * 100) / 100,
                         quantity: r.totalQty,
                     }),
+                    // 배당 계산기에는 내 평단·보유 수량으로 (내 평단 기준 배당 수익률을 볼 수 있어요)
+                    onSendToDividend: () => ctx.sendTo('dividend', {
+                        buyPrice: Math.round(r.newAvg * 100) / 100,
+                        quantity: r.totalQty,
+                    }),
                 });
             } else {
                 result = calculateSplitSell(market, readSell());

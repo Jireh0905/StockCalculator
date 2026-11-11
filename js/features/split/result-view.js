@@ -19,7 +19,7 @@ const toneOf = (n) => (Math.round(n) > 0 ? 'tone-up' : Math.round(n) < 0 ? 'tone
 
 /* ---------- 분할 매수 ---------- */
 
-export function renderBuyResult(el, r, market, { onSave, onSendToTarget, onSendToProfit }) {
+export function renderBuyResult(el, r, market, { onSave, onSendToTarget, onSendToProfit, onSendToDividend }) {
     el.className = 'card result-card';
     if (!r) {
         el.innerHTML = `<div class="result-empty"><span class="icon">📊</span>보유 주식과 추가 매수(매수가·수량)를<br>입력하면 새 평균 단가가 나와요</div>`;
@@ -68,18 +68,22 @@ export function renderBuyResult(el, r, market, { onSave, onSendToTarget, onSendT
         <p class="note">수수료는 빼고 계산한 단순 평균이에요. 증권사 앱의 평단과 조금 다를 수 있어요.</p>
         <div class="link-group" role="group" aria-label="이 평단으로 이어서 계산">
             <div class="link-group-title">이 평단으로 이어서 계산</div>
-            <div class="link-row">
+            <div class="link-row three">
                 <button type="button" class="link-btn" data-send-target>
-                    <span>목표가 계산 <span aria-hidden="true">→</span></span><small>매수가만 넘겨요</small>
+                    <span>목표가 <span aria-hidden="true">→</span></span><small>매수가</small>
                 </button>
                 <button type="button" class="link-btn" data-send-profit>
-                    <span>손익 계산 <span aria-hidden="true">→</span></span><small>매수가·수량을 넘겨요</small>
+                    <span>손익 <span aria-hidden="true">→</span></span><small>매수가·수량</small>
+                </button>
+                <button type="button" class="link-btn" data-send-dividend>
+                    <span>배당 <span aria-hidden="true">→</span></span><small>평단·수량</small>
                 </button>
             </div>
         </div>
         <button type="button" class="save-btn">기록에 저장</button>`;
     el.querySelector('[data-send-target]').addEventListener('click', onSendToTarget);
     el.querySelector('[data-send-profit]').addEventListener('click', onSendToProfit);
+    el.querySelector('[data-send-dividend]').addEventListener('click', onSendToDividend);
     el.querySelector('.save-btn').addEventListener('click', onSave);
 }
 

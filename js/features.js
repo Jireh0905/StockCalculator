@@ -24,6 +24,7 @@ import profit from './features/profit/index.js';
 import split from './features/split/index.js';
 import target from './features/target/index.js';
 import plan from './features/plan/index.js';
+import dividend from './features/dividend/index.js';
 
 export const FEATURES = [
     profit,
@@ -31,6 +32,6 @@ export const FEATURES = [
     plan,   // 물타기·손절 계획이라 분할 매매 바로 아래에
     target,
     // 아직 만들지 않은 기능: mount가 없고 soon: true → 메뉴에 "준비 중"으로 보여요
-    { id: 'dividend', name: '배당금 계산기', desc: '세금 뺀 실제 배당금', group: '계산기', icon: 'dividend', color: 'c4', soon: true },
+    dividend,
     { id: 'fx', name: '환율·시세', desc: '실시간 데이터 (서버가 필요해서 6단계에서)', group: '정보', icon: 'fx', color: 'c5', soon: true },
 ];

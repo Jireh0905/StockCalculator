@@ -48,12 +48,15 @@ export function readValues(container) {
     return values;
 }
 
-/** { name: '글자' } 값을 입력칸에 채워요. 값에 없는 칸은 그대로 둬요 */
+/**
+ * { name: '글자' } 값을 입력칸에 채워요. 값에 없는 칸은 그대로 둬요
+ * 숨은 입력칸(type="hidden", 예: 버튼으로 고른 "month")은 숫자가 아니라서 쉼표 처리를 하지 않아요.
+ */
 export function fillValues(container, values = {}) {
     container.querySelectorAll('input[name]').forEach(input => {
         if (values[input.name] === undefined) return;
         input.value = String(values[input.name]);
-        formatInput(input);
+        if (input.type !== 'hidden') formatInput(input);
     });
 }
 

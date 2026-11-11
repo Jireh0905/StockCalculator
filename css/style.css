@@ -698,6 +698,28 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
 .mini-btn:hover { border-color: var(--primary); background: var(--primary-weak); }
 .buy-line-sub .tone-up { color: var(--up); font-weight: 600; }
 .buy-line-sub .tone-down { color: var(--down); font-weight: 600; }
+.link-row.three { grid-template-columns: repeat(3, 1fr); }
+
+/* 배당 계산기 */
+/* 몇 개 중 하나 고르기 (배당 주기, 목표 기간) — 탭 버튼과 같은 모양, 조금 작게 */
+.segmented.small { margin-bottom: 0; }
+.segmented.small button { height: 36px; font-size: 0.875rem; }
+.segmented.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.segmented button[aria-checked="true"] {
+    background: var(--surface);
+    color: var(--primary);
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.result-krw {
+    margin: -4px 0 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-2);
+    font-variant-numeric: tabular-nums;
+}
+.result-krw span { margin-left: 4px; font-size: 0.75rem; font-weight: 400; color: var(--text-3); }
+.rows li span small.krw { display: block; font-size: 0.75rem; font-weight: 500; color: var(--text-3); }
+.note.note-warn { background: var(--up-weak); color: var(--up); }
 
 .breakdown { margin-top: 8px; }
 .breakdown summary {
