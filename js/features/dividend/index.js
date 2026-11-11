@@ -109,6 +109,12 @@ export default {
                         data: snapshot(),
                         result: { text: `1년 ${money(r.annualNet, market)}`, sub: `한 달 ${money(r.monthlyNet, market)}`, tone: 'up' },
                     }),
+                    // 적립식 계산기로: 지금 평가 금액을 처음 넣는 돈으로, 현재가 기준 배당 수익률·세율과 함께
+                    onSendToSaving: () => ctx.sendTo('saving', {
+                        initial: r.invested,
+                        divYield: r.yield,
+                        divTax: Math.round(r.taxRate * 1000) / 10,
+                    }),
                 });
             } else {
                 result = calculateGoalDividend(market, {

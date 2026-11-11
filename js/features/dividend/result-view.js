@@ -27,7 +27,7 @@ function notes(r) {
 
 /* ---------- 내 배당 ---------- */
 
-export function renderMineResult(el, r, market, { onSave }) {
+export function renderMineResult(el, r, market, { onSave, onSendToSaving }) {
     if (!r) {
         el.innerHTML = `<div class="result-empty"><span class="icon">💰</span>주당 배당금·배당 주기와 보유 수량을<br>입력하면 받을 배당이 나와요</div>`;
         return;
@@ -63,7 +63,17 @@ export function renderMineResult(el, r, market, { onSave }) {
         </ul>
         ${yields}
         ${notes(r)}
+        ${r.invested !== null ? `
+        <div class="link-group" role="group" aria-label="이어서 계산">
+            <div class="link-group-title">배당을 계속 다시 투자하면?</div>
+            <div class="link-row single">
+                <button type="button" class="link-btn" data-send-saving>
+                    <span>적립식으로 보기 <span aria-hidden="true">→</span></span><small>평가 금액·배당 수익률을 넘겨요</small>
+                </button>
+            </div>
+        </div>` : ''}
         <button type="button" class="save-btn">기록에 저장</button>`;
+    el.querySelector('[data-send-saving]')?.addEventListener('click', onSendToSaving);
     el.querySelector('.save-btn').addEventListener('click', onSave);
 }
 

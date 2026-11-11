@@ -296,10 +296,12 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
 .c4 { background: #ebfbee; color: #2f9e44; }
 .c5 { background: var(--surface-2); color: var(--text-3); }
 .c6 { background: #f3f0ff; color: #7048e8; }
+.c7 { background: #e3fafc; color: #0c8599; }
 @media (prefers-color-scheme: dark) {
     .c3 { background: #3a2a14; }
     .c4 { background: #16301c; }
     .c6 { background: #2a2244; color: #9775fa; }
+    .c7 { background: #12313a; color: #3bc9db; }
 }
 .records-card { padding: 8px 4px; }
 .records-card .history-list { padding: 0 8px; }
@@ -720,6 +722,54 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
 .result-krw span { margin-left: 4px; font-size: 0.75rem; font-weight: 400; color: var(--text-3); }
 .rows li span small.krw { display: block; font-size: 0.75rem; font-weight: 500; color: var(--text-3); }
 .note.note-warn { background: var(--up-weak); color: var(--up); }
+
+/* 적립식 계산기 */
+.hint.is-warn { color: var(--up); }
+.field.is-muted { opacity: .45; }
+/* 막대그래프 (saving/chart.js가 그리는 SVG). 색을 CSS 변수로 줘서 다크 모드에서도 맞게 */
+.chart-caption {
+    min-height: 40px;
+    margin-bottom: 4px;
+    font-size: 0.875rem;
+    color: var(--text-2);
+    font-variant-numeric: tabular-nums;
+}
+.chart-caption b { color: var(--text); margin-right: 4px; }
+.chart-caption span { display: block; font-size: 0.75rem; color: var(--text-3); }
+.chart-wrap { margin: 0 -4px; }
+.chart { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .grid-line { stroke: var(--border); stroke-width: 1; }
+.chart .axis-label { fill: var(--text-3); font-size: 8.5px; font-family: inherit; }
+.chart .bar { cursor: pointer; }
+.chart .bar-hit { fill: transparent; }
+.chart .bar-principal { fill: var(--text-3); opacity: .45; }
+.chart .bar-gain { fill: var(--primary); }
+.chart .bar-loss { fill: none; stroke: var(--down); stroke-width: 1; stroke-dasharray: 2 2; }
+.chart .bar.is-selected .bar-principal { opacity: .75; }
+.chart .bar.is-selected .bar-hit { fill: var(--primary-weak); }
+.chart-legend { display: flex; gap: 14px; margin-top: 6px; font-size: 0.75rem; color: var(--text-3); }
+.chart-legend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 2px; vertical-align: -1px; }
+.chart-legend .lg-principal { background: var(--text-3); opacity: .45; }
+.chart-legend .lg-gain { background: var(--primary); }
+/* 연도별 표: 처음에는 5년마다만, "전체 보기"로 펼치기 */
+.year-table-wrap { margin-top: 14px; }
+.year-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+}
+.year-table th, .year-table td { padding: 6px 3px; text-align: right; white-space: nowrap; }
+.year-table thead th { font-weight: 600; color: var(--text-3); border-bottom: 1px solid var(--border); }
+.year-table tbody th { text-align: left; font-weight: 600; color: var(--text-2); }
+.year-table tbody td { color: var(--text); }
+.year-table td.tone-up { color: var(--up); }
+.year-table td.tone-down { color: var(--down); }
+.year-table tbody tr { cursor: pointer; }
+.year-table tbody tr.is-selected { background: var(--primary-weak); }
+.year-table-wrap[data-collapsed="true"] tr.minor { display: none; }
+.table-unit { margin: 4px 0 0; font-size: 0.6875rem; color: var(--text-3); text-align: right; }
+.table-toggle { display: block; margin: 2px auto 0; }
 
 .breakdown { margin-top: 8px; }
 .breakdown summary {
