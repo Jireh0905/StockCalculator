@@ -20,8 +20,13 @@ import { setupDrawer, renderNav, closeDrawer } from './shell/drawer.js';
 import { setupHistorySheet, renderHistory, closeSheet } from './shell/history-sheet.js';
 import * as session from './core/session.js';
 import { showToast } from './core/toast.js';
+import { renderMarketBar, MARKETS } from './core/market.js';
 
 const APP_NAME = 'Jireh';
+
+/** 이름이 바뀐 기능의 예전 id → 지금 id (예전 주소·기록도 열리게) */
+const ALIASES = { average: 'split' };
+const featureById = (id) => FEATURES.find(f => f.id === (ALIASES[id] ?? id) && f.mount) ?? null;
 const $ = (id) => document.getElementById(id);
 
 /** 지금 보고 있는 기능 (홈이면 null) */
@@ -32,7 +37,12 @@ let page = null;
 let pendingReceived = null;
 
 function showHome() {
-    renderHome(page, { features: FEATURES, records: session.getRecords(), onSelect: openRecord });
+    renderHome(page, {
+        features: FEATURES,
+        records: session.getRecords(),
+        labelOf: (record) => recordLabel(record, 'name'), // 홈에서는 "손익 계산기 · 해외"처럼 전체 이름
+        onSelect: openRecord,
+    });
 }
 
 /* ---------- 라우터 ---------- */
@@ -40,7 +50,8 @@ function showHome() {
 /** 주소의 #/ 뒤 글자로 기능을 찾아요. 없거나 준비 중이면 null(홈) */
 function findRoute() {
     const id = location.hash.replace(/^#\/?/, '');
-    return FEATURES.find(f => f.id === id && f.mount) ?? null;
+    if (ALIASES[id]) history.replaceState(null, '', `#/${ALIASES[id]}`); // 예: #/average → #/split
+    return featureById(id);
 }
 
 /** 주소에 맞는 화면을 그려요 */
@@ -64,7 +75,18 @@ function render() {
     if (current) {
         $('pageTitle').textContent = current.name;
         document.title = `${current.name} · ${APP_NAME}`;
-        current.mount(page, createContext(current.id, received));
+        let root = page;
+        // 국내/해외를 쓰는 기능: 맨 위에 선택 버튼, 그 아래에 기능 화면
+        if (current.markets) {
+            const bar = document.createElement('div');
+            root = document.createElement('div');
+            page.append(bar, root);
+            renderMarketBar(bar, session.getMarket(), (market) => {
+                session.setMarket(market);
+                render(); // 같은 기능을 새 시장으로 다시 그려요 (입력값은 시장마다 따로 기억)
+            });
+        }
+        current.mount(root, createContext(current, received));
     } else {
         $('pageTitle').textContent = APP_NAME;
         document.title = APP_NAME;
@@ -79,20 +101,37 @@ function render() {
     window.scrollTo(0, 0);
 }
 
+/* ---------- 입력값 (국내/해외를 쓰는 기능은 시장별로 나눠 저장) ---------- */
+
+/** 기능이 쓰는 시장: 국내/해외를 쓰는 기능이면 지금 고른 시장, 아니면 null */
+const marketFor = (feature) => (feature.markets ? session.getMarket() : null);
+
+function getFeatureInputs(feature, market) {
+    const all = session.getInputs(feature.id);
+    return market ? (all?.[market] ?? null) : all;
+}
+
+function setFeatureInputs(feature, market, value) {
+    session.setInputs(feature.id, market ? { ...session.getInputs(feature.id), [market]: value } : value);
+}
+
 /**
  * 기능에게 넘겨줄 도구
- * @param {string} featureId
+ * 기능은 시장별 저장을 몰라도 돼요. ctx.inputs는 이미 지금 시장의 입력값이에요.
+ * @param {object} feature
  * @param {{ from: object, payload: object } | null} received - 다른 기능이 방금 넘겨준 값 (없으면 null)
  */
-function createContext(featureId, received = null) {
+function createContext(feature, received = null) {
+    const market = marketFor(feature);
     return {
-        inputs: session.getInputs(featureId),
-        saveInputs: (value) => session.setInputs(featureId, value),
+        market,
+        inputs: getFeatureInputs(feature, market),
+        saveInputs: (value) => setFeatureInputs(feature, market, value),
         addRecord: (record) => {
-            session.addRecord(featureId, record);
+            session.addRecord(feature.id, { ...record, market });
             showToast('기록에 저장했어요');
         },
-        sendTo: (targetId, payload) => sendTo(featureId, targetId, payload),
+        sendTo: (targetId, payload) => sendTo(feature.id, targetId, payload),
         received,
     };
 }
@@ -109,12 +148,16 @@ function createContext(featureId, received = null) {
  * @param {string} fromId - 보내는 기능 id
  * @param {string} targetId - 받는 기능 id
  * @param {object} payload - 넘길 값 (예: { buyPrice: 47333 })
+ *
+ * 국내/해외 선택은 모든 기능이 함께 쓰니까, 받는 기능도 보내는 기능과 같은 시장으로 열려요.
+ * receive(지금 입력값, 받은 값, 시장)의 세 번째 값으로 시장을 알려줘요 (단위·칸 이름이 달라서).
  */
 function sendTo(fromId, targetId, payload) {
-    const target = FEATURES.find(f => f.id === targetId && f.mount && f.receive);
-    if (!target) return;
+    const target = featureById(targetId);
+    if (!target?.receive) return;
 
-    session.setInputs(targetId, target.receive(session.getInputs(targetId), payload));
+    const market = marketFor(target);
+    setFeatureInputs(target, market, target.receive(getFeatureInputs(target, market), payload, market));
     pendingReceived = { to: targetId, from: FEATURES.find(f => f.id === fromId), payload };
 
     const hash = `#/${targetId}`;
@@ -126,8 +169,16 @@ function sendTo(fromId, targetId, payload) {
 
 /** 기록을 누르면: 그 기능의 입력값을 기록 당시로 되돌리고 그 화면으로 이동 */
 function openRecord(record) {
-    session.setInputs(record.feature, structuredClone(record.data));
-    const hash = `#/${record.feature}`;
+    const feature = featureById(record.feature);
+    if (!feature) return;
+    let market = null;
+    if (feature.markets) {
+        // 기록한 시장으로 바꿔서 열어요. (예전 손익 기록은 data.tab에 국내/해외가 있어요)
+        market = record.market ?? (record.data?.tab === 'global' ? 'global' : 'domestic');
+        session.setMarket(market);
+    }
+    setFeatureInputs(feature, market, structuredClone(record.data));
+    const hash = `#/${feature.id}`;
     if (location.hash === hash) render();   // 이미 그 화면이면 다시 그리기
     else location.hash = hash;              // 주소가 바뀌면 hashchange → render()
 }
@@ -148,10 +199,11 @@ function scopeFeatureIds() {
     return historyScope === 'group' ? groupFeatureIds() : [current.id];
 }
 
-/** 기록 왼쪽 위 글씨: "손익 · 국내 · 09:41"의 앞부분 */
-function recordLabel(record) {
-    const feature = FEATURES.find(f => f.id === record.feature);
-    return [feature?.shortName ?? record.feature, record.sub].filter(Boolean).join(' · ');
+/** 기록 왼쪽 위 글씨: "손익 · 해외 · 09:41"의 앞부분 (국내는 기본이라 생략) */
+function recordLabel(record, nameKey = 'shortName') {
+    const feature = featureById(record.feature);
+    const market = record.market === 'global' ? MARKETS.global.short : '';
+    return [feature?.[nameKey] ?? record.feature, market, record.sub].filter(Boolean).join(' · ');
 }
 
 /** 상단 기록 버튼의 숫자와 시트(칩·목록) 갱신 */

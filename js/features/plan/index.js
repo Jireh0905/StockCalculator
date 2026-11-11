@@ -1,7 +1,7 @@
 /**
  * plan/index.js — 하락 대응 계산기 (물타기할까, 손절할까 계획 세우기)
  *
- *   template.js ...... 화면 HTML + 분할 매수 단계 줄
+ *   template.js ...... 화면 HTML + 분할 매수 단계 줄 (국내/해외에 따라 단위·수수료 칸이 달라요)
  *   calculator.js .... 물타기 분할 매수·손절 후 재매수 계산 (화면과 무관)
  *   result-view.js ... 결과 카드 + 세 가지 선택 비교표
  *   index.js ......... 위 셋을 연결 + 탭·단계 줄 관리·입력값 기억·기록 저장 (이 파일)
@@ -14,7 +14,8 @@ import { template, createStepRow } from './template.js';
 import { planAveraging, planStopRebuy } from './calculator.js';
 import { renderAvgResult, renderStopResult, stepMessage, signedPercent } from './result-view.js';
 import { bindNumberInputs, readValues, fillValues, readNumber, readInt } from '../../core/number-input.js';
-import { won, wonPrecise, signedWon } from '../../core/format.js';
+import { won } from '../../core/format.js';
+import { price, money, signedMoney, isGlobal } from '../../core/market.js';
 
 const MAX_STEPS = 10;
 
@@ -26,9 +27,11 @@ export default {
     group: '계산기',
     icon: 'plan',
     color: 'c6',
+    markets: true,
 
     mount(view, ctx) {
-        view.innerHTML = template;
+        const market = ctx.market;
+        view.innerHTML = template(market);
         const resultEl = view.querySelector('[data-result]');
         const listEl = view.querySelector('[data-steps]');
         const addBtn = view.querySelector('[data-add]');
@@ -54,7 +57,7 @@ export default {
         }
 
         function addRow(values) {
-            const row = createStepRow();
+            const row = createStepRow(market);
             listEl.append(row);
             if (values) fillValues(row, values);
             updateRows();
@@ -71,7 +74,7 @@ export default {
             avgPrice: n('avgPrice'),
             holdQty: readInt(view, 'holdQty'),
             commRate: n('commRate'),
-            taxRate: n('taxRate'),
+            taxRate: isGlobal(market) ? 0 : n('taxRate'), // 해외: 본전·손실 구간이라 양도세 없음
         });
 
         /* ---------- 입력칸 아래 안내 (몇 % 아래인지, 단계별 결과) ---------- */
@@ -102,16 +105,16 @@ export default {
                 if (!r || r.status === 'empty') {
                     out.textContent = '';
                 } else if (r.status === 'ok') {
-                    out.textContent = `→ ${won(r.qty)}주 · ${won(r.cost)}원 · 평단 ${won(r.avgAfter)}원${r.overBudget ? ' · 예산 초과' : ''}`;
+                    out.textContent = `→ ${won(r.qty)}주 · ${money(r.cost, market)} · 평단 ${money(r.avgAfter, market)}${r.overBudget ? ' · 예산 초과' : ''}`;
                     if (r.overBudget) out.classList.add('is-warn');
                 } else {
-                    out.textContent = stepMessage(r, avgResult.avgPrice);
+                    out.textContent = stepMessage(r, avgResult.avgPrice, market);
                     out.classList.add('is-warn');
                 }
             });
 
             const v = (name) => view.querySelector(`input[name="${name}"]`).value || 0;
-            chip.textContent = `수수료 ${v('commRate')}% · 거래세 ${v('taxRate')}%`;
+            chip.textContent = isGlobal(market) ? `수수료 ${v('commRate')}%` : `수수료 ${v('commRate')}% · 거래세 ${v('taxRate')}%`;
         }
 
         /* ---------- 계산 + 그리기 ---------- */
@@ -120,27 +123,27 @@ export default {
                 ...common(),
                 steps: rows().map(row => ({ price: readNumber(row, 'stepPrice'), goal: readNumber(row, 'stepGoal') })),
                 stopLine: n('stopLine'),
-                budget: readInt(view, 'budget'),
+                budget: n('budget'),
             });
             stopResult = planStopRebuy({
                 ...common(),
                 stopPrice: n('stopPrice'),
                 rebuyPrice: n('rebuyPrice'),
-                rebuyAmount: readInt(view, 'rebuyAmount'),
+                rebuyAmount: n('rebuyAmount'),
             });
             updateHints();
 
             if (tab === 'avg') {
                 const r = avgResult;
-                renderAvgResult(resultEl, r, stopResult, {
+                renderAvgResult(resultEl, r, stopResult, market, {
                     onSave: () => ctx.addRecord({
-                        title: `평단 ${wonPrecise(r.avgPrice)}원 × ${won(r.holdQty)}주 · ${r.valid.length}단계 물타기`,
+                        title: `평단 ${price(r.avgPrice, market)} × ${won(r.holdQty)}주 · ${r.valid.length}단계 물타기`,
                         sub: '물타기 계획',
                         data: snapshot(),
-                        result: { text: `${won(r.finalAvg)}원`, sub: `+${won(r.extra)}원` },
+                        result: { text: money(r.finalAvg, market), sub: `+${money(r.extra, market)}` },
                     }),
-                    // 물타기 계산기로 단계별 매수를 그대로 넘겨요 → 거기서 차수별 평단·비중을 다시 확인
-                    onSendToAverage: () => ctx.sendTo('average', {
+                    // 분할 매매 계산기(분할 매수 탭)로 단계별 매수를 그대로 넘겨요 → 거기서 차수별 평단·비중을 다시 확인
+                    onSendToSplit: () => ctx.sendTo('split', {
                         avgPrice: r.avgPrice,
                         holdQty: r.holdQty,
                         buys: r.valid.map(s => ({ price: s.price, qty: s.qty })),
@@ -153,14 +156,14 @@ export default {
                 });
             } else {
                 const r = stopResult;
-                renderStopResult(resultEl, r, avgResult, {
+                renderStopResult(resultEl, r, avgResult, market, {
                     onSave: () => ctx.addRecord({
-                        title: `평단 ${wonPrecise(r.avgPrice)}원 × ${won(r.holdQty)}주 · 손절 ${wonPrecise(r.stopPrice)} → 재매수 ${wonPrecise(r.rebuyPrice)}`,
+                        title: `평단 ${price(r.avgPrice, market)} × ${won(r.holdQty)}주 · 손절 ${price(r.stopPrice, market)} → 재매수 ${price(r.rebuyPrice, market)}`,
                         sub: '손절 후 재매수',
                         data: snapshot(),
                         result: {
-                            text: `본전 ${won(r.breakEven)}원`,
-                            sub: `확정 ${signedWon(r.realized)}원`,
+                            text: `본전 ${money(r.breakEven, market)}`,
+                            sub: `확정 ${signedMoney(r.realized, market)}`,
                             tone: Math.round(r.realized) < 0 ? 'down' : Math.round(r.realized) > 0 ? 'up' : '',
                         },
                     }),

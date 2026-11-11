@@ -5,18 +5,15 @@
  * 각 기능의 화면 HTML은 기능 폴더 안에 둬요. (MFC로 치면 뷰마다 다이얼로그 리소스가 따로 있는 것)
  *
  * 입력칸은 id 대신 name으로 구분해요 (core/number-input.js 참고).
+ * 국내/해외 선택 버튼은 이제 모든 계산기가 함께 써서 app.js가 맨 위에 그려요 (core/market.js).
+ * 이 화면은 두 패널 중 지금 시장의 것만 보여줘요.
  */
 export const template = `
 <div class="layout">
     <!-- ===== 입력 영역 ===== -->
     <div class="input-col">
-        <div class="segmented" role="tablist" aria-label="주식 종류">
-            <button type="button" role="tab" id="tab-domestic" aria-controls="panel-domestic" aria-selected="true" data-tab="domestic">국내 주식</button>
-            <button type="button" role="tab" id="tab-global" aria-controls="panel-global" aria-selected="false" data-tab="global">해외 주식</button>
-        </div>
-
         <!-- 국내 -->
-        <section class="card panel" id="panel-domestic" role="tabpanel" aria-labelledby="tab-domestic">
+        <section class="card panel" id="panel-domestic">
             <div class="grid-2">
                 <label class="field">
                     <span class="field-label">매수가</span>
@@ -50,7 +47,7 @@ export const template = `
         </section>
 
         <!-- 해외 -->
-        <section class="card panel" id="panel-global" role="tabpanel" aria-labelledby="tab-global" hidden>
+        <section class="card panel" id="panel-global" hidden>
             <div class="grid-2">
                 <label class="field">
                     <span class="field-label">매수가</span>

@@ -6,9 +6,9 @@ import { createRecordItem } from './shell/record-item.js';
 
 /**
  * @param {HTMLElement} container
- * @param {{ features: Array, records: Array, onSelect: (record) => void }} options
+ * @param {{ features: Array, records: Array, labelOf: (record) => string, onSelect: (record) => void }} options
  */
-export function renderHome(container, { features, records, onSelect }) {
+export function renderHome(container, { features, records, labelOf, onSelect }) {
     const groups = [...new Set(features.map(f => f.group))];
 
     const tile = (f, wide) => `
@@ -41,9 +41,7 @@ export function renderHome(container, { features, records, onSelect }) {
         list.innerHTML = '<li class="history-empty">아직 기록이 없어요.<br>계산기에서 “기록에 저장”을 눌러보세요.</li>';
         return;
     }
-    const nameOf = (id) => features.find(f => f.id === id)?.name ?? id;
     records.slice(0, 10).forEach(record => {
-        const label = [nameOf(record.feature), record.sub].filter(Boolean).join(' · '); // 예: "손익 계산기 · 국내"
-        list.append(createRecordItem(record, { label, onSelect }));
+        list.append(createRecordItem(record, { label: labelOf(record), onSelect })); // 예: "손익 계산기 · 해외"
     });
 }

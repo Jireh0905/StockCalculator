@@ -397,6 +397,8 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
     color: var(--text);
     box-shadow: 0 1px 3px rgba(0,0,0,.08);
 }
+/* 계산기 맨 위의 국내/해외 선택 (모든 계산기 공통, core/market.js) */
+.market-bar { max-width: 480px; margin: 0 auto; }
 
 /* ---------- 카드 ---------- */
 .card {
@@ -539,6 +541,7 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
     word-break: keep-all;
 }
 .result-amount small { font-size: 1.25rem; font-weight: 700; margin-left: 2px; }
+.result-amount small.pre { margin: 0 2px 0 0; }   /* 해외: 숫자 앞의 $ */
 .rate-pill {
     display: inline-block;
     padding: 4px 10px;
@@ -675,6 +678,26 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
 .risk-list li + li { margin-top: 4px; }
 .risk-list b { margin-right: 4px; color: var(--text-2); }
 .link-row.single { grid-template-columns: 1fr; }
+
+/* 분할 매매 계산기 */
+.result-label-sub { font-weight: 400; color: var(--text-3); }
+.sub-title-note { margin-left: 4px; font-weight: 500; }
+.hint-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 22px; }
+.mini-btn {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--primary);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.mini-btn:hover { border-color: var(--primary); background: var(--primary-weak); }
+.buy-line-sub .tone-up { color: var(--up); font-weight: 600; }
+.buy-line-sub .tone-down { color: var(--down); font-weight: 600; }
 
 .breakdown { margin-top: 8px; }
 .breakdown summary {
@@ -885,4 +908,7 @@ button:focus-visible, summary:focus-visible, a:focus-visible, .history-item:focu
         align-items: start;
     }
     .result-col { position: sticky; top: 72px; }   /* 상단 바(56px) 아래에 붙음 */
+    /* 국내/해외 버튼은 입력(왼쪽) 칸 너비에 맞춰요 */
+    .market-bar { max-width: 920px; }
+    .market-bar .segmented { max-width: calc(50% - 10px); }
 }

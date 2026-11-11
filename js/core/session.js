@@ -8,8 +8,10 @@
  *
  * 저장 모양:
  *   {
- *     inputs:  { profit: {...}, average: {...} },   기능별 입력값 (모양은 각 기능이 정함)
- *     records: [ { id, feature, time, title, sub, data, result } ]   모든 기능의 기록
+ *     market:  'domestic' | 'global',              모든 계산기가 함께 쓰는 국내/해외 선택
+ *     inputs:  { profit: {...}, split: {...} },     기능별 입력값 (모양은 각 기능이 정함)
+ *              국내/해외를 쓰는 기능은 { domestic: {...}, global: {...} } 처럼 시장별로 나눠 저장
+ *     records: [ { id, feature, market, time, title, sub, data, result } ]   모든 기능의 기록
  *   }
  *
  * 기록이 바뀌면 subscribe()로 등록한 함수들을 불러줘요.
@@ -51,6 +53,18 @@ function notify() {
 /** 기록이 바뀔 때마다 fn을 불러줘요 */
 export function subscribe(fn) {
     listeners.add(fn);
+}
+
+/* ---------- 국내/해외 ---------- */
+
+/** 지금 고른 시장 (처음이면 국내) */
+export function getMarket() {
+    return state.market === 'global' ? 'global' : 'domestic';
+}
+
+export function setMarket(market) {
+    state.market = market;
+    persist();
 }
 
 /* ---------- 입력값 ---------- */
