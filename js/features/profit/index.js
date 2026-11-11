@@ -47,6 +47,7 @@ function updateSettingChips(view) {
 export default {
     id: 'profit',
     name: '손익 계산기',
+    shortName: '손익',
     desc: '수수료·세금을 뺀 실제 매매 손익',
     group: '계산기',
     icon: 'profit',

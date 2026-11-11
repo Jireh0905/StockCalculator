@@ -72,6 +72,7 @@ function renderResult(el, r, { onSave }) {
 export default {
     id: 'target',
     name: '목표가 계산기',
+    shortName: '목표가',
     desc: '본전·목표 수익률이 되는 매도가',
     group: '계산기',
     icon: 'target',

@@ -43,6 +43,7 @@ export function renderHome(container, { features, records, onSelect }) {
     }
     const nameOf = (id) => features.find(f => f.id === id)?.name ?? id;
     records.slice(0, 10).forEach(record => {
-        list.append(createRecordItem(record, { label: nameOf(record.feature), onSelect }));
+        const label = [nameOf(record.feature), record.sub].filter(Boolean).join(' · '); // 예: "손익 계산기 · 국내"
+        list.append(createRecordItem(record, { label, onSelect }));
     });
 }

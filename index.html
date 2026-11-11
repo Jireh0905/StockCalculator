@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#f1f3f5" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#101214" media="(prefers-color-scheme: dark)">
-    <title>주식 도구 모음</title>
+    <title>Jireh</title>
     <!-- 한글 웹폰트 Pretendard (무료 오픈소스 폰트). 불러오지 못하면 기기 기본 글꼴로 표시됨 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
     <link rel="stylesheet" href="css/style.css">
@@ -19,12 +19,12 @@
     <!-- ===== 왼쪽 메뉴 ===== -->
     <div class="scrim" id="scrim"></div>
     <nav class="drawer" id="drawer" aria-label="기능 메뉴">
-        <a class="drawer-head" href="#/">
+        <div class="drawer-head">
             <span class="logo">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
             </span>
-            <b>주식 도구 모음</b>
-        </a>
+            <b>Jireh</b>
+        </div>
         <div class="nav" id="nav"></div>
         <div class="drawer-foot">
             <p>입력값과 계산 기록은 <b>이 창을 닫으면</b> 사라져요.<br>다른 기능으로 이동해도 그대로 남아 있어요.</p>
@@ -38,7 +38,7 @@
             <button type="button" class="icon-btn menu-btn" id="menuBtn" aria-label="메뉴 열기" aria-controls="drawer">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
-            <h1 id="pageTitle">주식 도구 모음</h1>
+            <h1 id="pageTitle">Jireh</h1>
             <span class="session-chip" title="이 창을 닫으면 초기화돼요"><i></i>임시 저장 중</span>
             <button type="button" class="history-btn" id="historyBtn" aria-haspopup="dialog">
                 기록 <span class="badge" id="historyCount"></span>
@@ -58,6 +58,8 @@
             <button type="button" class="text-btn" id="clearHistory">전체 삭제</button>
             <button type="button" class="text-btn" id="closeSheet" aria-label="닫기">✕</button>
         </div>
+        <!-- 보기 범위: 같은 그룹(예: 계산기) 전체 / 지금 기능만 -->
+        <div class="sheet-filter" id="historyFilter" role="group" aria-label="기록 보기 범위"></div>
         <ul class="history-list" id="historyList"></ul>
     </aside>
 

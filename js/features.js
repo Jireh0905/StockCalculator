@@ -6,7 +6,8 @@
  * 기능 하나 = js/features/<id>/ 폴더 하나 (MFC의 CView 하나, WinForms의 UserControl 하나)
  * 각 기능은 아래 모양의 객체를 export default 해요.
  *   {
- *     id, name, desc, group, icon, color,
+ *     id, name, shortName, desc, group, icon, color,
+ *     (group이 같은 기능끼리는 계산 기록을 함께 봐요)
  *     mount(container, ctx)   화면을 그리고 이벤트를 연결 (OnInitialUpdate 같은 역할)
  *   }
  * ctx(앱이 넘겨주는 도구):

@@ -21,7 +21,7 @@ import { setupHistorySheet, renderHistory, closeSheet } from './shell/history-sh
 import * as session from './core/session.js';
 import { showToast } from './core/toast.js';
 
-const APP_NAME = '주식 도구 모음';
+const APP_NAME = 'Jireh';
 const $ = (id) => document.getElementById(id);
 
 /** 지금 보고 있는 기능 (홈이면 null) */
@@ -95,12 +95,58 @@ function openRecord(record) {
     else location.hash = hash;              // 주소가 바뀌면 hashchange → render()
 }
 
-/** 상단 기록 버튼의 숫자와 시트 목록 갱신 */
+/**
+ * 기록 시트의 보기 범위: 'group' = 같은 그룹(예: 계산기) 전체, 'feature' = 지금 기능만
+ * 기능을 옮겨 다녀도 고른 범위는 유지돼요.
+ */
+let historyScope = 'group';
+
+/** 지금 기능과 같은 그룹의 기능 id 목록 */
+function groupFeatureIds() {
+    return FEATURES.filter(f => f.group === current.group && f.mount).map(f => f.id);
+}
+
+/** 지금 범위에 해당하는 기능 id 목록 */
+function scopeFeatureIds() {
+    return historyScope === 'group' ? groupFeatureIds() : [current.id];
+}
+
+/** 기록 왼쪽 위 글씨: "손익 · 국내 · 09:41"의 앞부분 */
+function recordLabel(record) {
+    const feature = FEATURES.find(f => f.id === record.feature);
+    return [feature?.shortName ?? record.feature, record.sub].filter(Boolean).join(' · ');
+}
+
+/** 상단 기록 버튼의 숫자와 시트(칩·목록) 갱신 */
 function refreshHistory() {
-    renderHistory(current ? session.getRecords(current.id) : [], {
+    if (!current) {
+        renderHistory({ scopes: [], scope: '', records: [], labelOf: recordLabel, onScope() {}, onSelect: openRecord, onDelete() {} });
+        return;
+    }
+    renderHistory({
+        scopes: [
+            { id: 'group', label: `${current.group} 전체`, count: session.getRecords(groupFeatureIds()).length },
+            { id: 'feature', label: '이 기능만', count: session.getRecords(current.id).length },
+        ],
+        scope: historyScope,
+        records: session.getRecords(scopeFeatureIds()),
+        labelOf: recordLabel,
+        onScope: (id) => {
+            historyScope = id;
+            refreshHistory();
+        },
+        // 다른 기능의 기록이면 그 계산기로 이동해서 불러와요
         onSelect: openRecord,
         onDelete: (record) => session.removeRecord(record.id),
     });
+}
+
+/** "전체 삭제": 지금 보이는 범위만 지워요 */
+function clearVisibleRecords() {
+    const ids = scopeFeatureIds();
+    const count = session.getRecords(ids).length;
+    const what = historyScope === 'group' ? `${current.group} 기록` : `${current.name} 기록`;
+    if (confirm(`${what} ${count}개를 모두 지울까요?`)) session.clearRecords(ids);
 }
 
 /* ---------- 시작 ---------- */
@@ -111,9 +157,7 @@ setupDrawer({
         showToast('모두 초기화했어요');
     },
 });
-setupHistorySheet({
-    onClear: () => session.clearRecords(current?.id),
-});
+setupHistorySheet({ onClear: clearVisibleRecords });
 
 // 기록이 바뀔 때마다: 기록 버튼·시트 갱신, 홈이면 목록도 다시 그리기
 session.subscribe(() => {

@@ -68,9 +68,19 @@ export function setInputs(feature, value) {
 
 /* ---------- 기록 ---------- */
 
-/** 기록 목록 (feature를 주면 그 기능의 기록만). 최신이 앞 */
-export function getRecords(feature) {
-    return feature ? state.records.filter(r => r.feature === feature) : state.records;
+/** 기능 id 하나 또는 여러 개 → 해당 기록인지 판별하는 함수 (없으면 전부) */
+function matcher(features) {
+    if (!features) return () => true;
+    const ids = Array.isArray(features) ? features : [features];
+    return (r) => ids.includes(r.feature);
+}
+
+/**
+ * 기록 목록. 최신이 앞
+ * @param {string | string[]} [features] - 기능 id (여러 개면 배열). 생략하면 전부
+ */
+export function getRecords(features) {
+    return state.records.filter(matcher(features));
 }
 
 /**
@@ -94,9 +104,13 @@ export function removeRecord(id) {
     notify();
 }
 
-/** 기록 지우기 (feature를 주면 그 기능의 기록만) */
-export function clearRecords(feature) {
-    state.records = feature ? state.records.filter(r => r.feature !== feature) : [];
+/**
+ * 기록 지우기
+ * @param {string | string[]} [features] - 기능 id (여러 개면 배열). 생략하면 전부
+ */
+export function clearRecords(features) {
+    const match = matcher(features);
+    state.records = state.records.filter(r => !match(r));
     notify();
 }
 
