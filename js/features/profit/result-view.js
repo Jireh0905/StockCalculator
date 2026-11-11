@@ -43,10 +43,19 @@ export function renderResult(container, r, { onSave }) {
         <div class="result-amount">${signedWon(r.net)}<small>원</small></div>
         <span class="rate-pill">${arrow} ${Math.abs(r.rate).toFixed(2)}%</span>
 
+        <!-- 두 줄 구성: 위는 이름·금액, 아래는 어떻게 나온 금액인지 (물타기 "매수 내역"과 같은 모양) -->
+        <ul class="buy-lines money-lines">
+            <li class="buy-line">
+                <div class="buy-line-top"><span>매수에 쓴 돈</span><b>${won(r.payIn)}원</b></div>
+                <div class="buy-line-sub"><span>매수 ${won(r.totalBuy)} + 수수료 ${won(r.buyComm)}</span></div>
+            </li>
+            <li class="buy-line">
+                <div class="buy-line-top"><span>매도로 받을 돈</span><b>${won(r.payOut)}원</b></div>
+                <div class="buy-line-sub"><span>매도 ${won(r.totalSell)} − 수수료 ${won(r.sellComm)} − ${r.taxName} ${won(r.tax)}</span></div>
+            </li>
+        </ul>
         <ul class="rows">
-            <li><span>내는 돈 (매수+수수료)</span><span>${won(r.payIn)}원</span></li>
-            <li><span>받는 돈 (매도−수수료−세금)</span><span>${won(r.payOut)}원</span></li>
-            <li><span>수수료·세금 합계</span><span>${won(r.buyComm + r.sellComm + r.tax)}원</span></li>
+            <li class="divider"><span>수수료·세금 합계</span><span>${won(r.buyComm + r.sellComm + r.tax)}원</span></li>
         </ul>
 
         <details class="breakdown">

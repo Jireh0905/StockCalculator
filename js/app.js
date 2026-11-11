@@ -28,6 +28,8 @@ const $ = (id) => document.getElementById(id);
 let current = null;
 /** 지금 화면을 그리고 있는 요소 (<main> 안에 하나) */
 let page = null;
+/** 다른 기능이 방금 넘겨준 값 (도착한 화면이 그려질 때 한 번만 쓰고 비워요) */
+let pendingReceived = null;
 
 function showHome() {
     renderHome(page, { features: FEATURES, records: session.getRecords(), onSelect: openRecord });
@@ -55,10 +57,14 @@ function render() {
     page.className = 'page';
     $('view').replaceChildren(page);
 
+    // 넘겨받은 값은 그 기능 화면에 도착했을 때 한 번만 알려줘요
+    const received = pendingReceived && current && pendingReceived.to === current.id ? pendingReceived : null;
+    pendingReceived = null;
+
     if (current) {
         $('pageTitle').textContent = current.name;
         document.title = `${current.name} · ${APP_NAME}`;
-        current.mount(page, createContext(current.id));
+        current.mount(page, createContext(current.id, received));
     } else {
         $('pageTitle').textContent = APP_NAME;
         document.title = APP_NAME;
@@ -73,8 +79,12 @@ function render() {
     window.scrollTo(0, 0);
 }
 
-/** 기능에게 넘겨줄 저장 도구 */
-function createContext(featureId) {
+/**
+ * 기능에게 넘겨줄 도구
+ * @param {string} featureId
+ * @param {{ from: object, payload: object } | null} received - 다른 기능이 방금 넘겨준 값 (없으면 null)
+ */
+function createContext(featureId, received = null) {
     return {
         inputs: session.getInputs(featureId),
         saveInputs: (value) => session.setInputs(featureId, value),
@@ -82,7 +92,34 @@ function createContext(featureId) {
             session.addRecord(featureId, record);
             showToast('기록에 저장했어요');
         },
+        sendTo: (targetId, payload) => sendTo(featureId, targetId, payload),
+        received,
     };
+}
+
+/* ---------- 기능끼리 값 넘기기 ---------- */
+
+/**
+ * fromId 기능이 targetId 기능에게 값을 넘기고, 그 화면으로 이동해요.
+ *
+ * 보내는 쪽은 받는 쪽의 저장 모양을 몰라요. 받는 기능의 receive()가
+ * "지금 입력값 + 받은 값 → 새 입력값"을 직접 만들어요.
+ * (MFC에서 다른 뷰의 멤버를 직접 고치지 않고 SendMessage로 부탁하는 것과 같아요)
+ *
+ * @param {string} fromId - 보내는 기능 id
+ * @param {string} targetId - 받는 기능 id
+ * @param {object} payload - 넘길 값 (예: { buyPrice: 47333 })
+ */
+function sendTo(fromId, targetId, payload) {
+    const target = FEATURES.find(f => f.id === targetId && f.mount && f.receive);
+    if (!target) return;
+
+    session.setInputs(targetId, target.receive(session.getInputs(targetId), payload));
+    pendingReceived = { to: targetId, from: FEATURES.find(f => f.id === fromId), payload };
+
+    const hash = `#/${targetId}`;
+    if (location.hash === hash) render();
+    else location.hash = hash;              // hashchange → render() → 받는 기능의 mount(ctx.received)
 }
 
 /* ---------- 기록 ---------- */

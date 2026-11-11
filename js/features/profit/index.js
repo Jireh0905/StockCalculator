@@ -11,7 +11,8 @@ import { template } from './template.js';
 import { calculateProfit } from './calculator.js';
 import { renderResult } from './result-view.js';
 import { bindNumberInputs, readValues, fillValues, readNumber, readInt } from '../../core/number-input.js';
-import { won, usd, signedWon } from '../../core/format.js';
+import { won, wonPrecise, usd, signedWon } from '../../core/format.js';
+import { showReceived } from '../../core/received.js';
 
 /** 국내/해외 탭의 입력값을 계산기(calculator.js)가 받는 모양으로 읽어와요 */
 function readInput(view, type) {
@@ -52,6 +53,22 @@ export default {
     group: '계산기',
     icon: 'profit',
     color: 'c1',
+
+    /**
+     * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 물타기 → "손익 계산")
+     * 국내 탭으로 바꾸고 매수가·수량만 바꿔요. 매도가, 수수료·세금, 해외 탭 값은 그대로 둬요.
+     *
+     * @param {{ tab: string, values: object } | null} inputs - 지금 저장된 입력값 (처음이면 null)
+     * @param {{ buyPrice: number, quantity: number }} payload - 넘겨받은 값 (매수가는 소수 둘째 자리까지)
+     * @returns 새 입력값 (ctx.inputs와 같은 모양)
+     */
+    receive(inputs, { buyPrice, quantity }) {
+        return {
+            ...inputs,
+            tab: 'domestic',
+            values: { ...inputs?.values, buyPriceD: wonPrecise(buyPrice), quantityD: won(quantity) },
+        };
+    },
 
     /**
      * @param {HTMLElement} view - 이 기능을 그릴 자리
@@ -111,5 +128,16 @@ export default {
 
         updateSettingChips(view);
         showTab(tab);
+
+        // 다른 기능에서 매수가·수량을 받아 들어왔으면: 강조 + 알림, 그리고 매도가 칸으로 커서 이동
+        if (ctx.received) {
+            const { from, payload } = ctx.received;
+            showReceived(view, ['buyPriceD', 'quantityD'],
+                `${from?.shortName ?? '다른 계산기'} 평단 ${wonPrecise(payload.buyPrice)}원 × ${won(payload.quantity)}주를 넣었어요`);
+            // 이전 매도가가 있으면 남겨두되 전체 선택 → 바로 숫자를 치면 새 값으로 바뀌어요
+            const sell = view.querySelector('input[name="sellPriceD"]');
+            sell.focus({ preventScroll: true });
+            sell.select();
+        }
     },
 };

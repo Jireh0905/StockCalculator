@@ -63,7 +63,7 @@ function createBuyRow() {
     return row;
 }
 
-function renderResult(el, r, { onSave }) {
+function renderResult(el, r, { onSave, onSendToTarget, onSendToProfit }) {
     if (!r) {
         el.innerHTML = `<div class="result-empty"><span class="icon">📊</span>보유 주식과 추가 매수(매수가·수량)를<br>입력하면 새 평균 단가가 나와요</div>`;
         return;
@@ -108,7 +108,20 @@ function renderResult(el, r, { onSave }) {
         </ul>
         ${skipped}
         <p class="note">수수료는 빼고 계산한 단순 평균이에요. 증권사 앱의 평단과 몇 원 다를 수 있어요.</p>
+        <div class="link-group" role="group" aria-label="이 평단으로 이어서 계산">
+            <div class="link-group-title">이 평단으로 이어서 계산</div>
+            <div class="link-row">
+                <button type="button" class="link-btn" data-send-target>
+                    <span>목표가 계산 <span aria-hidden="true">→</span></span><small>매수가만 넘겨요</small>
+                </button>
+                <button type="button" class="link-btn" data-send-profit>
+                    <span>손익 계산 <span aria-hidden="true">→</span></span><small>매수가·수량을 넘겨요</small>
+                </button>
+            </div>
+        </div>
         <button type="button" class="save-btn">기록에 저장</button>`;
+    el.querySelector('[data-send-target]').addEventListener('click', onSendToTarget);
+    el.querySelector('[data-send-profit]').addEventListener('click', onSendToProfit);
     el.querySelector('.save-btn').addEventListener('click', onSave);
 }
 
@@ -182,6 +195,15 @@ export default {
                         result: { text: `${won(result.newAvg)}원`, sub: `${signedWon(result.change)}원` },
                     });
                 },
+                // 새 평단을 목표가 계산기의 매수가로 넘겨요.
+                // 화면에 보이는 숫자와 같도록 원 단위로 반올림 (예: 47,333.33 → 47,333)
+                onSendToTarget: () => ctx.sendTo('target', { buyPrice: Math.round(result.newAvg) }),
+                // 손익 계산기에는 새 평단과 총 보유 수량을 넘겨요.
+                // 평단은 소수 둘째 자리까지 (47,333.33 × 60주 = 2,840,000원 → 물타기의 총 매수 금액과 맞음)
+                onSendToProfit: () => ctx.sendTo('profit', {
+                    buyPrice: Math.round(result.newAvg * 100) / 100,
+                    quantity: result.totalQty,
+                }),
             });
         }
 

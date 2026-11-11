@@ -10,6 +10,11 @@ export function won(n) {
     return Math.round(n).toLocaleString('ko-KR');
 }
 
+/** 소수 둘째 자리까지 원화: 47333.333 → "47,333.33", 52000 → "52,000" (평단처럼 원 아래까지 필요할 때) */
+export function wonPrecise(n) {
+    return n.toLocaleString('ko-KR', { maximumFractionDigits: 2 });
+}
+
 /** 부호 붙인 원화: 97485 → "+97,485", -1200 → "−1,200" */
 export function signedWon(n) {
     const rounded = Math.round(n);

@@ -81,7 +81,7 @@ export function calculateProfit(type, input) {
         tax,                                // 세금
         net,                                // 순손익
         rate: net / totalBuy * 100,         // 수익률 (%)
-        payIn: totalBuy + buyComm,          // 실제로 낸 돈
-        payOut: totalSell - sellComm - tax, // 실제로 받는 돈
+        payIn: totalBuy + buyComm,          // 매수에 쓴 돈 (매수 금액 + 수수료)
+        payOut: totalSell - sellComm - tax, // 매도로 받을 돈 (매도 금액 − 수수료 − 세금)
     };
 }

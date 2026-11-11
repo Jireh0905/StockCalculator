@@ -441,6 +441,12 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
     border-color: var(--primary);
     background: var(--surface);
 }
+/* 다른 기능에서 값을 받아온 칸을 잠깐 강조 */
+.input-wrap input.flash { animation: flash 1.6s ease-out; }
+@keyframes flash {
+    0%, 35% { border-color: var(--primary); background: var(--primary-weak); }
+    100%    { border-color: transparent;    background: var(--surface-2); }
+}
 .input-wrap .unit {
     position: absolute;
     right: 14px;
@@ -568,7 +574,7 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
 .rows li.sub span:last-child { color: var(--text-2); font-weight: 500; }
 .rows li.divider { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 12px; }
 
-/* 물타기: 매수 내역 (기존 보유 / 1차 / 2차 …) */
+/* 두 줄 내역 (이름·금액 / 계산 근거) — 물타기 매수 내역, 손익 결과의 매수에 쓴 돈·매도로 받을 돈 */
 .sub-title {
     margin: 22px 0 6px;
     font-size: 0.8125rem;
@@ -608,6 +614,7 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
 .share-bar.hold i { background: var(--text-3); }
 .share-bar.add i { background: var(--primary); }
 .buy-lines + .rows { margin-top: 10px; }
+.money-lines { margin-top: 16px; }
 
 .breakdown { margin-top: 8px; }
 .breakdown summary {
@@ -631,6 +638,37 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
     line-height: 1.5;
     color: var(--text-3);
 }
+
+/* 다른 기능으로 값을 넘기는 버튼 묶음 (예: 물타기 → 목표가 / 손익) */
+.link-group { margin-top: 18px; }
+.link-group-title {
+    margin-bottom: 8px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text-3);
+}
+.link-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.link-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 56px;
+    padding: 8px 6px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--primary);
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+.link-btn small { font-size: 0.6875rem; font-weight: 500; color: var(--text-3); }
+.link-btn:hover { background: var(--primary-weak); border-color: var(--primary); }
+.link-group + .save-btn { margin-top: 10px; }
 
 .save-btn {
     width: 100%;

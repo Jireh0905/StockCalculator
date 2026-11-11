@@ -4,6 +4,7 @@
 import { calculateTarget } from './calculator.js';
 import { bindNumberInputs, readValues, fillValues, readNumber } from '../../core/number-input.js';
 import { won } from '../../core/format.js';
+import { showReceived } from '../../core/received.js';
 
 const template = `
 <div class="layout">
@@ -78,6 +79,18 @@ export default {
     icon: 'target',
     color: 'c3',
 
+    /**
+     * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 물타기 → "이 평단으로 목표가 계산")
+     * 매수가만 바꾸고, 목표 수익률·수수료·세금은 원래 넣어둔 값을 그대로 둬요.
+     *
+     * @param {object | null} inputs - 지금 저장된 입력값 (처음이면 null)
+     * @param {{ buyPrice: number }} payload - 넘겨받은 값
+     * @returns 새 입력값 (ctx.inputs와 같은 모양)
+     */
+    receive(inputs, { buyPrice }) {
+        return { ...inputs, values: { ...inputs?.values, buyPrice: won(buyPrice) } };
+    },
+
     mount(view, ctx) {
         view.innerHTML = template;
         const resultEl = view.querySelector('[data-result]');
@@ -85,6 +98,12 @@ export default {
         let result = null;
 
         if (ctx.inputs?.values) fillValues(view, ctx.inputs.values);
+
+        // 다른 기능에서 값을 받아 들어왔으면: 매수가 칸을 잠깐 강조하고 어디서 왔는지 알려줘요
+        if (ctx.received) {
+            const { from, payload } = ctx.received;
+            showReceived(view, ['buyPrice'], `${from?.shortName ?? '다른 계산기'} 평단 ${won(payload.buyPrice)}원을 매수가로 넣었어요`);
+        }
 
         function refresh() {
             const v = (name) => view.querySelector(`input[name="${name}"]`).value || 0;
