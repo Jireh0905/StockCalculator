@@ -97,7 +97,13 @@ export default {
 
         function refresh() {
             result = calculateProfit(tab, readInput(view, tab));
-            renderResult(resultEl, result, { onSave: saveRecord });
+            renderResult(resultEl, result, {
+                onSave: saveRecord,
+                // 손실이면: 수수료·세금까지 뺀 손실률을 손실 회복 계산기로 (본전까지 몇 % 올라야 하나)
+                onSendToRecover: () => ctx.sendTo('recover', { loss: Math.round(Math.abs(result.rate) * 100) / 100 }),
+                // 이익이면: 매수가를 목표가 계산기로 (목표 수익률이 되는 매도가는?)
+                onSendToTarget: () => ctx.sendTo('target', { buyPrice: readInput(view, tab).buyPrice }),
+            });
         }
 
         function saveRecord() {

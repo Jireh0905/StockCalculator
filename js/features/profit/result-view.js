@@ -9,9 +9,10 @@ import { won, signedWon, percent } from '../../core/format.js';
 /**
  * @param {HTMLElement} container - 결과를 그릴 영역
  * @param {object | null} r - calculateProfit()의 결과 (입력이 덜 됐으면 null)
- * @param {{ onSave: () => void }} handlers - "기록에 저장" 버튼을 눌렀을 때 할 일
+ * @param {{ onSave: () => void, onSendToRecover: () => void, onSendToTarget: () => void }} handlers
+ *   onSave "기록에 저장", onSendToRecover 손실일 때 "손실 회복 계산", onSendToTarget 이익일 때 "목표가 계산"
  */
-export function renderResult(container, r, { onSave }) {
+export function renderResult(container, r, { onSave, onSendToRecover, onSendToTarget }) {
     if (!r) {
         container.className = 'card result-card';
         container.innerHTML = `
@@ -74,7 +75,41 @@ export function renderResult(container, r, { onSave }) {
             ${note}
         </details>
 
+        ${nextStep(r, dir)}
         <button type="button" class="save-btn">기록에 저장</button>`;
 
+    container.querySelector('[data-send-recover]')?.addEventListener('click', onSendToRecover);
+    container.querySelector('[data-send-target]')?.addEventListener('click', onSendToTarget);
     container.querySelector('.save-btn').addEventListener('click', onSave);
+}
+
+/**
+ * 결과에 따라 다음에 볼 계산기로 가는 버튼 하나
+ *   손실이면 → 손실 회복 계산기 (손실률을 넘겨요: 본전까지 몇 % 올라야 하나)
+ *   이익이면 → 목표가 계산기 (매수가를 넘겨요: 목표 수익률이 되려면 얼마에 팔아야 하나)
+ */
+function nextStep(r, dir) {
+    if (dir === 'is-down') {
+        return `
+        <div class="link-group" role="group" aria-label="이어서 계산">
+            <div class="link-group-title">손실이 났다면</div>
+            <div class="link-row single">
+                <button type="button" class="link-btn" data-send-recover>
+                    <span>손실 회복 계산 <span aria-hidden="true">→</span></span><small>손실률 ${Math.abs(r.rate).toFixed(2)}%를 넘겨요 · 본전까지 몇 % 올라야 할까</small>
+                </button>
+            </div>
+        </div>`;
+    }
+    if (dir === 'is-up') {
+        return `
+        <div class="link-group" role="group" aria-label="이어서 계산">
+            <div class="link-group-title">이익이 났다면</div>
+            <div class="link-row single">
+                <button type="button" class="link-btn" data-send-target>
+                    <span>목표가 계산 <span aria-hidden="true">→</span></span><small>매수가를 넘겨요 · 목표 수익률이 되는 매도가는?</small>
+                </button>
+            </div>
+        </div>`;
+    }
+    return '';
 }

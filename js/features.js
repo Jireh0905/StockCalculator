@@ -26,6 +26,7 @@ import target from './features/target/index.js';
 import plan from './features/plan/index.js';
 import dividend from './features/dividend/index.js';
 import saving from './features/saving/index.js';
+import recover from './features/recover/index.js';
 
 export const FEATURES = [
     profit,
@@ -35,5 +36,6 @@ export const FEATURES = [
     // 아직 만들지 않은 기능: mount가 없고 soon: true → 메뉴에 "준비 중"으로 보여요
     dividend,
     saving,
+    recover,
     { id: 'fx', name: '환율·시세', desc: '실시간 데이터 (서버가 필요해서 6단계에서)', group: '정보', icon: 'fx', color: 'c5', soon: true },
 ];

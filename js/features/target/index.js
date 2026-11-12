@@ -123,7 +123,7 @@ export default {
         // 다른 기능에서 값을 받아 들어왔으면: 매수가 칸을 잠깐 강조하고 어디서 왔는지 알려줘요
         if (ctx.received) {
             const { from, payload } = ctx.received;
-            showReceived(view, ['buyPrice'], `${from?.shortName ?? '다른 계산기'} 평단 ${price(payload.buyPrice, market)}을 매수가로 넣었어요`);
+            showReceived(view, ['buyPrice'], `${from?.shortName ?? '다른 계산기'}에서 ${price(payload.buyPrice, market)}을 매수가로 넣었어요`);
         }
 
         function refresh() {
