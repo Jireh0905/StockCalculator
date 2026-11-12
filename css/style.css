@@ -683,6 +683,32 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
 .risk-list b { margin-right: 4px; color: var(--text-2); }
 .link-row.single { grid-template-columns: 1fr; }
 
+/* 해외: 손익 쪼개 보기 (core/fx-split.js) — 주가 몫 / 환율 몫 비율 막대 */
+.fx-bar {
+    display: flex;
+    height: 18px;
+    margin-top: 8px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--surface-2);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 18px;
+    color: #fff;
+}
+.fx-bar i { display: block; font-style: normal; text-align: center; white-space: nowrap; overflow: hidden; }
+.fx-bar i.is-up { background: var(--up); }
+.fx-bar i.is-down { background: var(--down); }
+.fx-bar i.is-fx { opacity: .7; }             /* 환율 몫은 조금 옅게 (같은 색이어도 구분되게) */
+.fx-bar i + i { border-left: 2px solid var(--surface); }
+.buy-line-sub b.tone-up { color: var(--up); }
+.buy-line-sub b.tone-down { color: var(--down); }
+.fx-think { margin-bottom: 6px; }
+.fx-think .grid-2 { margin-top: 2px; }
+.fx-think .field { margin-bottom: 4px; }
+.fx-think .fx-sub { margin: 0 0 4px; }
+.fx-think .input-wrap input { height: 44px; font-size: 1rem; }
+
 /* 분할 매매 계산기 */
 .result-label-sub { font-weight: 400; color: var(--text-3); }
 .sub-title-note { margin-left: 4px; font-weight: 500; }

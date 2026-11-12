@@ -5,14 +5,16 @@
  * 계산은 하지 않아요. "계산"과 "보여주기"를 나누는 게 이번 단계의 핵심이에요.
  */
 import { won, signedWon, percent } from '../../core/format.js';
+import { fxSplitHtml, fxHintHtml } from '../../core/fx-split.js';
 
 /**
  * @param {HTMLElement} container - 결과를 그릴 영역
  * @param {object | null} r - calculateProfit()의 결과 (입력이 덜 됐으면 null)
- * @param {{ onSave: () => void, onSendToRecover: () => void, onSendToTarget: () => void }} handlers
+ * @param {{ onSave: () => void, onSendToRecover: () => void, onSendToTarget: () => void, fx?: object | null }} handlers
  *   onSave "기록에 저장", onSendToRecover 손실일 때 "손실 회복 계산", onSendToTarget 이익일 때 "목표가 계산"
+ *   fx: 해외일 때 주가·환율 몫으로 나눈 손익 (core/fx-split.js의 splitFx 결과)
  */
-export function renderResult(container, r, { onSave, onSendToRecover, onSendToTarget }) {
+export function renderResult(container, r, { onSave, onSendToRecover, onSendToTarget, fx = null }) {
     if (!r) {
         container.className = 'card result-card';
         container.innerHTML = `
@@ -59,6 +61,8 @@ export function renderResult(container, r, { onSave, onSendToRecover, onSendToTa
             <li class="divider"><span>수수료·세금 합계</span><span>${won(r.buyComm + r.sellComm + r.tax)}원</span></li>
         </ul>
 
+        ${r.type === 'global' ? fxBlock(r, fx) : ''}
+
         <details class="breakdown">
             <summary>계산 내역 자세히 보기</summary>
             <ul class="rows">
@@ -81,6 +85,20 @@ export function renderResult(container, r, { onSave, onSendToRecover, onSendToTa
     container.querySelector('[data-send-recover]')?.addEventListener('click', onSendToRecover);
     container.querySelector('[data-send-target]')?.addEventListener('click', onSendToTarget);
     container.querySelector('.save-btn').addEventListener('click', onSave);
+}
+
+/**
+ * 해외: 손익을 "주가로 번 돈"과 "환율로 번 돈"으로 나눠 보여줘요.
+ * 매매 차익 − 수수료 − 양도소득세 = 위의 예상 순손익과 1원까지 같아요.
+ * 매수 시 환율을 비워 두면(매도 환율과 같다고 봐서) 나눌 게 없어 안내만 보여줘요.
+ */
+function fxBlock(r, fx) {
+    if (!fx || fx.sameRate) return fxHintHtml;
+    return fxSplitHtml(fx, [
+        { label: `수수료 (매수 ${won(r.buyComm)} + 매도 ${won(r.sellComm)})`, value: -(r.buyComm + r.sellComm) },
+        { label: '양도소득세', value: -r.tax },
+        { label: '순손익', value: r.net, divider: true, strong: true },
+    ]);
 }
 
 /**

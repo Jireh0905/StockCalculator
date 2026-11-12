@@ -69,3 +69,37 @@ export function calculateTargetGlobal({ buyPrice, goalRate, commRate, taxRate })
         profitPerShare: buyPrice * g,
     };
 }
+
+/**
+ * 해외 주식 목표가 — 환율까지 생각하기 (원화 기준)
+ *
+ * 산 날 환율 r1, 팔 때 예상 환율 r2가 다르면, 원화로 같은 수익률을 내는 달러 목표가가 달라져요.
+ * 원화 순이익 = 매도가 × (1 − 수수료율) × r2 − 매수가 × (1 + 수수료율) × r1
+ *   공제 안 (세금 없음):  원화 순이익 = 매수가 × r1 × 목표수익률
+ *       → 매도가 = 매수가 × r1 × (1 + 수수료율 + 목표수익률) ÷ ((1 − 수수료율) × r2)
+ *   공제를 다 썼을 때:    원화 순이익 × (1 − 세율) = 매수가 × r1 × 목표수익률
+ *       → 매도가 = 매수가 × r1 × (1 + 수수료율 + 목표수익률 ÷ (1 − 세율)) ÷ ((1 − 수수료율) × r2)
+ *   본전(원화 손익 0)     → 매도가 = 매수가 × r1 × (1 + 수수료율) ÷ ((1 − 수수료율) × r2)
+ * 수익률의 기준은 손익 계산기와 같은 원화 매수 금액(매수가 × r1)이에요.
+ *
+ * @param {{ buyPrice: number, goalRate: number, commRate: number, taxRate: number, fxBuy: number, fxSell: number }} input
+ * @returns 환율 두 개 중 하나라도 비었으면 null
+ */
+export function calculateTargetFx({ buyPrice, goalRate, commRate, taxRate, fxBuy, fxSell }) {
+    if (!(buyPrice > 0 && fxBuy > 0 && fxSell > 0) || Number.isNaN(goalRate)) return null;
+    const c = (commRate || 0) / 100;
+    const t = (taxRate || 0) / 100;
+    const g = goalRate / 100;
+    if (c >= 1 || t >= 1) return null;
+    const k = buyPrice * fxBuy / ((1 - c) * fxSell);     // 공통 부분
+    const target = k * (1 + c + g);
+    const targetTaxed = k * (1 + c + g / (1 - t));
+    const breakEven = k * (1 + c);
+    return {
+        fxBuy, fxSell,
+        fxRate: (fxSell / fxBuy - 1) * 100,              // 환율 변화 (%)
+        target, targetRise: (target / buyPrice - 1) * 100,
+        targetTaxed, targetTaxedRise: (targetTaxed / buyPrice - 1) * 100,
+        breakEven, breakEvenRise: (breakEven / buyPrice - 1) * 100,
+    };
+}

@@ -14,6 +14,7 @@ import { bindNumberInputs, readValues, fillValues, readNumber, readInt } from '.
 import { won, usd, signedWon } from '../../core/format.js';
 import { showReceived } from '../../core/received.js';
 import { price, inputText, isGlobal } from '../../core/market.js';
+import { splitFx } from '../../core/fx-split.js';
 
 /** 시장별 입력칸 이름 끝 글자: 국내 buyPriceD, 해외 buyPriceG */
 const suffix = (market) => (isGlobal(market) ? 'G' : 'D');
@@ -96,9 +97,14 @@ export default {
         const remember = () => ctx.saveInputs({ values: readValues(panel) });
 
         function refresh() {
-            result = calculateProfit(tab, readInput(view, tab));
+            const input = readInput(view, tab);
+            result = calculateProfit(tab, input);
             renderResult(resultEl, result, {
                 onSave: saveRecord,
+                // 해외: 주가로 번 돈 / 환율로 번 돈 나누기 (계산에 쓴 환율 그대로)
+                fx: tab === 'global' && result
+                    ? splitFx({ buyPrice: input.buyPrice, sellPrice: input.sellPrice, qty: result.quantity, rateBuy: result.rateBuy, rateSell: result.rateSell })
+                    : null,
                 // 손실이면: 수수료·세금까지 뺀 손실률을 손실 회복 계산기로 (본전까지 몇 % 올라야 하나)
                 onSendToRecover: () => ctx.sendTo('recover', { loss: Math.round(Math.abs(result.rate) * 100) / 100 }),
                 // 이익이면: 매수가를 목표가 계산기로 (목표 수익률이 되는 매도가는?)

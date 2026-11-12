@@ -3,6 +3,7 @@
  */
 import { won, signedWon } from '../../core/format.js';
 import { price, money, signedMoney, bigMoney, isGlobal } from '../../core/market.js';
+import { fxSplitHtml, fxHintHtml } from '../../core/fx-split.js';
 
 /** 등락률 글자: 10 → "+10.0%" */
 export function signedPercent(n, digits = 1) {
@@ -111,6 +112,18 @@ function remainBlock(r, market) {
 }
 
 /** 해외: 양도소득세 블록 (원화) */
+/**
+ * 해외: 판 주식들의 손익을 주가로 번 돈 / 환율로 번 돈으로 (손익 계산기와 같은 모듈)
+ * 매매 차익 − 원화 수수료 = 아래 양도소득세 블록의 양도차익과 1원까지 같아요.
+ */
+function fxBlock(r) {
+    if (!r.fx || r.fx.sameRate) return fxHintHtml;
+    return fxSplitHtml(r.fx, [
+        { label: '수수료 (원화, 매수 + 매도)', value: -r.feesKrw },
+        { label: '양도차익 (원화)', value: r.gainKrw, divider: true, strong: true },
+    ]);
+}
+
 function taxBlock(r) {
     if (!r.taxReady) {
         return `<p class="note">매도 시 환율을 넣으면 양도소득세와 세후 순이익(원화)을 계산해요.</p>`;
@@ -158,6 +171,10 @@ export function renderSellResult(el, r, market, { onSave }) {
                 <span>${price(s.price, market)} × ${won(s.qty)}주 · 평단 ${signedPercent((s.price / r.avgPrice - 1) * 100)}</span>
                 <span class="${toneOf(global ? s.pl * 100 : s.pl)}">${global ? '손익' : '순이익'} ${signedMoney(s.pl, market)}</span>
             </div>
+            ${s.fx && !s.fx.sameRate ? `
+            <div class="buy-line-sub">
+                <span>원화로: 주가 <b class="${toneOf(s.fx.pricePart)}">${signedWon(s.fx.pricePart)}원</b> · 환율 <b class="${toneOf(s.fx.fxPart)}">${signedWon(s.fx.fxPart)}원</b></span>
+            </div>` : ''}
         </li>`).join('');
 
     const over = r.rows.filter(s => s.status === 'over').map(s => `${s.no}차`);
@@ -183,6 +200,7 @@ export function renderSellResult(el, r, market, { onSave }) {
             ${global ? `<li><span>손익 (세금 전)</span><span class="${toneOf(r.pl * 100)}">${signedMoney(r.pl, market)}</span></li>` : ''}
         </ul>
         ${overNote}
+        ${global && r.taxReady ? fxBlock(r) : ''}
         ${global ? taxBlock(r) : ''}
         ${remainBlock(r, market)}
         <p class="note">손익은 매수 수수료까지 원가에 넣어 계산해요. 손익 계산기와 같은 방식이에요.</p>

@@ -2,11 +2,13 @@
  * target/index.js — 목표가 계산기 (본전·목표 수익률이 되는 매도가)
  *
  * 국내: 수수료 + 거래세. 해외: 수수료 + 양도소득세(공제 안 / 공제를 다 썼을 때 두 가지 목표가)
+ * 해외는 "환율까지 생각하기"(산 날 환율, 팔 때 예상 환율)를 넣으면 원화 기준 목표가도 보여줘요.
  */
-import { calculateTarget, calculateTargetGlobal } from './calculator.js';
+import { calculateTarget, calculateTargetGlobal, calculateTargetFx } from './calculator.js';
 import { bindNumberInputs, readValues, fillValues, readNumber } from '../../core/number-input.js';
 import { showReceived } from '../../core/received.js';
 import { MARKETS, isGlobal, moneyInput, ex, price, money, bigMoney, inputText } from '../../core/market.js';
+import { won } from '../../core/format.js';
 
 function template(market) {
     const m = MARKETS[market];
@@ -25,6 +27,7 @@ function template(market) {
                 <span class="input-wrap"><input name="goalRate" inputmode="decimal" value="10" autocomplete="off"><span class="unit">%</span></span>
                 <span class="hint">수수료·세금을 모두 빼고 남길 수익률</span>
             </label>
+            ${isGlobal(market) ? fxFields() : ''}
 
             <details class="settings">
                 <summary>수수료·세금 (${m.short}) <span class="chip" data-chip></span></summary>
@@ -49,16 +52,57 @@ function template(market) {
 </div>`;
 }
 
+/** 해외: 환율까지 생각하기 (선택). 산 날 환율과 팔 때 예상 환율 */
+function fxFields() {
+    return `
+            <div class="field fx-think">
+                <span class="field-label">환율까지 생각하기 <span class="field-optional">선택</span></span>
+                <div class="grid-2">
+                    <label class="field">
+                        <span class="hint fx-sub">산 날 환율</span>
+                        <span class="input-wrap"><input name="fxBuy" inputmode="decimal" placeholder="1,300" autocomplete="off"><span class="unit">원</span></span>
+                    </label>
+                    <label class="field">
+                        <span class="hint fx-sub">팔 때 예상 환율</span>
+                        <span class="input-wrap"><input name="fxSell" inputmode="decimal" placeholder="1,250" autocomplete="off"><span class="unit">원</span></span>
+                    </label>
+                </div>
+                <span class="hint">두 칸을 넣으면 원화로 목표 수익률이 되는 달러 목표가도 보여줘요</span>
+            </div>`;
+}
+
 function readInput(view) {
+    const fx = (name) => (view.querySelector(`input[name="${name}"]`) ? readNumber(view, name) : NaN);
     return {
         buyPrice: readNumber(view, 'buyPrice'),
         goalRate: readNumber(view, 'goalRate'),
         commRate: readNumber(view, 'commRate'),
         taxRate: readNumber(view, 'taxRate'),
+        fxBuy: fx('fxBuy'),             // 해외만 있는 칸
+        fxSell: fx('fxSell'),
     };
 }
 
-function renderResult(el, r, market, { onSave }) {
+/** 해외: 환율이 바뀌면 원화로 같은 수익률을 내는 달러 목표가 */
+function fxTargetHtml(f, r, goalRate, market) {
+    if (!f) return '';
+    if (Math.abs(f.fxRate) < 1e-9) return '<p class="note">산 날과 팔 때 환율이 같으면 원화 기준 목표가도 위와 같아요.</p>';
+    const pct = (n) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toFixed(2)}%`;
+    const way = f.fxRate < 0 ? '내리면' : '오르면';
+    return `
+        <h3 class="sub-title">환율까지 생각하면 <span class="sub-title-note">산 날 ${won(f.fxBuy)}원 → 팔 때 ${won(f.fxSell)}원 (${pct(f.fxRate)})</span></h3>
+        <ul class="rows rows-tight">
+            <li><span>목표 매도가 (공제 안)</span><span class="tone-up">${money(f.target, market)}</span></li>
+            <li class="sub"><span>매수가보다</span><span>${pct(f.targetRise)}</span></li>
+            <li><span>공제 250만 원을 다 썼다면</span><span>${money(f.targetTaxed, market)}</span></li>
+            <li><span>원화 본전 매도가</span><span>${money(f.breakEven, market)}</span></li>
+            <li class="sub"><span>매수가보다</span><span>${pct(f.breakEvenRise)}</span></li>
+        </ul>
+        <p class="note">환율이 ${Math.abs(f.fxRate).toFixed(2)}% ${way} 달러로 <b>${pct(f.targetRise)}</b>가 올라야 원화로 ${goalRate}%예요
+            (환율이 그대로면 ${pct(r.targetRise)}). 원화 수익률은 손익 계산기와 같이 원화 매수 금액 기준이에요.</p>`;
+}
+
+function renderResult(el, r, market, { onSave, fx = null, goalRate }) {
     if (!r) {
         el.innerHTML = `<div class="result-empty"><span class="icon">🎯</span>매수가와 목표 수익률을 입력하면<br>팔아야 할 가격이 나와요</div>`;
         return;
@@ -84,6 +128,7 @@ function renderResult(el, r, market, { onSave }) {
             ${taxedRows}
         </ul>
         ${taxNote}
+        ${fxTargetHtml(fx, r, goalRate, market)}
         <button type="button" class="save-btn">기록에 저장</button>`;
     el.querySelector('.save-btn').addEventListener('click', onSave);
 }
@@ -130,8 +175,11 @@ export default {
             const v = (name) => view.querySelector(`input[name="${name}"]`).value || 0;
             chip.textContent = `수수료 ${v('commRate')}% · ${isGlobal(market) ? '양도세' : '거래세'} ${v('taxRate')}%`;
 
-            result = calculate(readInput(view));
+            const input = readInput(view);
+            result = calculate(input);
             renderResult(resultEl, result, market, {
+                fx: isGlobal(market) ? calculateTargetFx(input) : null,
+                goalRate: input.goalRate,
                 onSave: () => {
                     const input = readInput(view);
                     ctx.addRecord({

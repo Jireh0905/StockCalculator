@@ -6,6 +6,7 @@
  *
  * 분할 매수의 평단은 수수료를 뺀 단순 평균이라 국내/해외 계산이 같아요 (단위만 원/$).
  */
+import { splitFx, combineFx } from '../../core/fx-split.js';
 
 /**
  * @param {{ avgPrice: number, holdQty: number, buys: Array<{ price: number, qty: number }> }} input
@@ -119,6 +120,8 @@ export function calculateSplitSell(market, { avgPrice, holdQty, sells, commRate,
             received: got,                                 // 이 단계에서 받는 돈
             pl: got - basis,                               // 이 단계 손익 (해외는 세금 전)
             gainKrw: global ? (gross - fee) * rateSell - basis * rateBuy : NaN, // 해외: 원화 차익
+            // 해외: 이 단계 손익을 주가로 번 돈 / 환율로 번 돈으로 (평단에 사서 이 가격에 판 것으로)
+            fx: global ? splitFx({ buyPrice: avgPrice, sellPrice: s.price, qty: s.qty, rateBuy, rateSell }) : null,
             left,                                          // 이 단계 뒤 남은 수량
             receivedSoFar: received,
         };
@@ -173,6 +176,8 @@ export function calculateSplitSell(market, { avgPrice, holdQty, sells, commRate,
         deduct,                                            // 이번에 쓴 기본 공제
         taxKrw,                                            // 양도소득세 (원)
         net,                                               // 세후 순이익 (원)
+        fx: combineFx(valid.map(v => v.fx)),               // 합계를 주가 몫 / 환율 몫으로
+        feesKrw: sum('fee') * rateSell + (basis - soldCost) * rateBuy, // 원화 수수료 (매도 + 매수)
         rate: net / (soldCost * rateBuy) * 100,
     };
 }
