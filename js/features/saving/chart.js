@@ -9,7 +9,20 @@
  * 색은 CSS(.bar-principal, .bar-gain)에서 정해서 다크 모드에서도 자동으로 바뀌어요.
  */
 import { won } from '../../core/format.js';
-import { isGlobal, money } from '../../core/market.js';
+import { isGlobal, money, isKrwView, fxRate } from '../../core/market.js';
+
+/**
+ * 해외 결과를 [원]으로 볼 때: 금액을 원화로 바꾼 줄과 '국내' 시장을 돌려줘요.
+ * 그러면 눈금·표가 국내처럼 "2.7억", "만 원 단위"로 나와요.
+ */
+function forView(rows, market) {
+    if (!isKrwView(market)) return { rows, market };
+    const k = fxRate();
+    return {
+        rows: rows.map(r => ({ ...r, principal: r.principal * k, value: r.value * k, gain: r.gain * k, cashDiv: r.cashDiv * k })),
+        market: 'domestic',
+    };
+}
 
 /* ---------- 짧은 금액 (그래프 눈금·표용) ---------- */
 
@@ -47,7 +60,8 @@ const PAD = { left: 36, right: 6, top: 8, bottom: 20 };
  * @param {string} market
  * @returns {string} SVG 문자열
  */
-export function chartSvg(rows, market) {
+export function chartSvg(viewRows, viewMarket) {
+    const { rows, market } = forView(viewRows, viewMarket);
     const max = Math.max(...rows.map(r => Math.max(r.value, r.principal)), 1);
     const step = niceStep(max);
     const top = Math.ceil(max / step) * step;
@@ -110,7 +124,9 @@ function cell(n, market) {
  * @param {string} market
  * @param {boolean} showCash - 받아서 쓴 배당 칸을 보여줄지
  */
-export function tableHtml(rows, market, showCash) {
+export function tableHtml(viewRows, viewMarket, showCash) {
+    const krwView = isKrwView(viewMarket);
+    const { rows, market } = forView(viewRows, viewMarket);
     const last = rows[rows.length - 1].year;
     // 처음에는 1년차, 5년마다, 마지막 해만 보여주고 "전체 보기"로 펼쳐요
     const key = (y) => y === 1 || y % 5 === 0 || y === last;
@@ -131,7 +147,7 @@ export function tableHtml(rows, market, showCash) {
                 </tr></thead>
                 <tbody>${body}</tbody>
             </table>
-            <p class="table-unit">${isGlobal(market) ? '단위: 달러' : '단위: 만 원'}${showCash ? ' · 받은 배당은 세후 누적' : ''}</p>
+            <p class="table-unit">${isGlobal(market) ? '단위: 달러' : krwView ? `단위: 만 원 (환율 ${won(fxRate())}원)` : '단위: 만 원'}${showCash ? ' · 받은 배당은 세후 누적' : ''}</p>
             ${hasMinor ? '<button type="button" class="text-btn table-toggle" data-table-toggle>전체 보기 ▾</button>' : ''}
         </div>`;
 }

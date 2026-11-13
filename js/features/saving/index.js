@@ -17,7 +17,8 @@ import { renderGrowResult, renderGoalResult } from './result-view.js';
 import { caption } from './chart.js';
 import { bindNumberInputs, readValues, fillValues, readNumber, readInt } from '../../core/number-input.js';
 import { won, wonPrecise } from '../../core/format.js';
-import { money, inputText, isGlobal } from '../../core/market.js';
+import { money, inputText, isGlobal, viewMarket } from '../../core/market.js';
+import { getFx } from '../../core/session.js';
 import { showReceived } from '../../core/received.js';
 
 export default {
@@ -29,6 +30,7 @@ export default {
     icon: 'saving',
     color: 'c7',
     markets: true,
+    fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
      * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 배당 → "적립식으로 보기")
@@ -82,7 +84,7 @@ export default {
             reinvest: reinvestInput.value !== 'no',
             divTax: n('divTax'),
             inflation: n('inflation'),
-            ...(isGlobal(market) ? { capTax: n('capTax'), taxBase: readInt(view, 'taxBase'), fx: n('fx') } : {}),
+            ...(isGlobal(market) ? { capTax: n('capTax'), taxBase: readInt(view, 'taxBase'), fx: getFx() } : {}),
         });
 
         function updateHints() {
@@ -141,7 +143,7 @@ export default {
         function selectYear(year) {
             const row = result?.rows.find(r => r.year === year);
             if (!row) return;
-            resultEl.querySelector('[data-caption]').innerHTML = caption(row, market);
+            resultEl.querySelector('[data-caption]').innerHTML = caption(row, viewMarket(market));
             resultEl.querySelectorAll('.bar').forEach(g => g.classList.toggle('is-selected', Number(g.dataset.year) === year));
             resultEl.querySelectorAll('.year-table tr[data-year]').forEach(tr => tr.classList.toggle('is-selected', Number(tr.dataset.year) === year));
         }

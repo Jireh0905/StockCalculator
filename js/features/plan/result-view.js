@@ -4,7 +4,7 @@
  * 금액은 시장에 따라 원/$로 보여줘요 (core/market.js의 price·money·signedMoney).
  */
 import { won } from '../../core/format.js';
-import { price, money, signedMoney, bigMoney, isGlobal } from '../../core/market.js';
+import { price, money, signedMoney, bigMoney, isGlobal, krwLine, fxToggle } from '../../core/market.js';
 
 /** 등락률 글자: 12.345 → "+12.35%", −4.3 → "−4.30%" */
 export function signedPercent(n, digits = 2) {
@@ -128,8 +128,10 @@ export function renderAvgResult(el, r, stop, m, { onSave, onSendToSplit, onSendT
     }
 
     el.innerHTML = `
+        ${fxToggle(m)}
         <div class="result-label">물타기 후 최종 평단</div>
         <div class="result-amount">${bigMoney(r.finalAvg, m)}</div>
+        ${krwLine(r.finalAvg, m)}
         <span class="rate-pill pill-down">추가 매수 ${money(r.extra, m)}</span>
 
         <h3 class="sub-title">단계별 매수</h3>
@@ -214,8 +216,10 @@ export function renderStopResult(el, r, avg, m, { onSave, onSendToProfit }) {
     ].filter(Boolean).join(' ');
 
     el.innerHTML = `
+        ${fxToggle(m)}
         <div class="result-label">재매수 후 본전 가격 <span class="result-label-sub">(${feeWords(m)} 포함)</span></div>
         <div class="result-amount">${bigMoney(r.breakEven, m)}</div>
+        ${krwLine(r.breakEven, m)}
         <span class="rate-pill ${r.extra > 0 ? 'pill-up' : 'pill-flat'}">추가로 넣는 돈 ${money(r.extra, m)}</span>
 
         ${sellBlock}

@@ -2,7 +2,7 @@
  * dividend/result-view.js — 배당 계산기의 결과 카드 그리기 (계산은 하지 않고 보여주기만)
  */
 import { won } from '../../core/format.js';
-import { price, money, bigMoney, isGlobal } from '../../core/market.js';
+import { price, money, bigMoney, isGlobal, krwLine, fxToggle } from '../../core/market.js';
 import { freqOf, THRESHOLD_KRW } from './calculator.js';
 
 const pct = (n) => `${n.toFixed(2)}%`;
@@ -19,7 +19,7 @@ function notes(r) {
     }
     if (isGlobal(r.market)) {
         list.push(`<p class="note">해외 배당은 현지에서 ${(r.taxRate * 100).toFixed(1).replace(/\.0$/, '')}%를 떼고 들어와요 (미국 기준).
-            한국 세율(14%)보다 높아서 국내에서 더 떼지 않아요.${r.fx > 0 ? '' : ' 환율을 넣으면 원화로도 보여줘요.'}</p>`);
+            한국 세율(14%)보다 높아서 국내에서 더 떼지 않아요.</p>`);
     }
     list.push('<p class="note">지금 배당금이 그대로 이어진다고 본 예상치예요. 회사가 배당을 바꾸면 달라져요.</p>');
     return list.join('');
@@ -48,16 +48,17 @@ export function renderMineResult(el, r, market, { onSave, onSendToSaving }) {
         </ul>` : '';
 
     el.innerHTML = `
+        ${fxToggle(market)}
         <div class="result-label">1년 세후 배당금</div>
         <div class="result-amount">${bigMoney(r.annualNet, market)}</div>
-        ${global && r.annualNetKrw !== null ? `<div class="result-krw">${krw(r.annualNetKrw)} <span>환율 ${won(r.fx)}원</span></div>` : ''}
+        ${krwLine(r.annualNet, market)}
         ${pill}
 
         <h3 class="sub-title">받는 배당</h3>
         <ul class="rows rows-tight">
             <li><span>1회 (${f.every})</span><span>${money(r.perNet, market)}</span></li>
             <li class="sub"><span>세전 ${money(r.perGross, market)} − 세금 ${money(r.perTax, market)}</span><span></span></li>
-            <li><span>한 달 평균</span><span>${money(r.monthlyNet, market)}${global && r.monthlyNetKrw !== null ? ` <small class="krw">${krw(r.monthlyNetKrw)}</small>` : ''}</span></li>
+            <li><span>한 달 평균</span><span>${money(r.monthlyNet, market)}</span></li>
             <li class="divider"><span>1년 세전 (주당 ${price(r.annualDps, market)} × ${won(r.qty)}주)</span><span>${money(r.annualGross, market)}</span></li>
             <li class="sub"><span>세금 ${(r.taxRate * 100).toFixed(1).replace(/\.0$/, '')}%</span><span>−${money(r.annualTax, market)}</span></li>
         </ul>
@@ -102,6 +103,7 @@ export function renderGoalResult(el, r, market, { onSave }) {
     }
 
     el.innerHTML = `
+        ${fxToggle(market)}
         <div class="result-label">필요한 수량 <span class="result-label-sub">(${goalText})</span></div>
         <div class="result-amount">${won(r.qty)}<small>주</small></div>
         <span class="rate-pill pill-up">투자금 ${money(r.invest, market)}</span>
@@ -119,7 +121,7 @@ export function renderGoalResult(el, r, market, { onSave }) {
 
         <h3 class="sub-title">${won(r.qty)}주를 사면</h3>
         <ul class="rows rows-tight">
-            <li><span>한 달 세후 배당</span><span>${money(r.monthlyNet, market)}${global && r.monthlyNetKrw !== null ? ` <small class="krw">${krw(r.monthlyNetKrw)}</small>` : ''}</span></li>
+            <li><span>한 달 세후 배당</span><span>${money(r.monthlyNet, market)}</span></li>
             <li><span>1년 세후 배당</span><span>${money(r.annualNet, market)}</span></li>
         </ul>
         ${cashBlock}

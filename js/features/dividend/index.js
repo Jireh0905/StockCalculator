@@ -14,7 +14,8 @@ import { calculateMyDividend, calculateGoalDividend, freqOf } from './calculator
 import { renderMineResult, renderGoalResult } from './result-view.js';
 import { bindNumberInputs, readValues, fillValues, readNumber, readInt } from '../../core/number-input.js';
 import { won } from '../../core/format.js';
-import { price, money, inputText, isGlobal } from '../../core/market.js';
+import { price, money, inputText, isGlobal, viewMarket } from '../../core/market.js';
+import { getFx } from '../../core/session.js';
 import { showReceived } from '../../core/received.js';
 
 /** 처음 열 때 배당 주기: 국내는 연 1회가 많고, 미국은 분기가 많아요 */
@@ -29,6 +30,7 @@ export default {
     icon: 'dividend',
     color: 'c4',
     markets: true,
+    fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
      * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 분할 매수 → "배당 계산")
@@ -78,7 +80,7 @@ export default {
             dps: n('dps'),
             freq: Number(hidden('freq').value),
             taxRate: n('taxRate'),
-            fx: isGlobal(market) ? n('fx') : NaN,
+            fx: isGlobal(market) ? getFx() : NaN, // 해외: 맨 위 기준 환율
         });
 
         function updateHints() {
@@ -89,7 +91,7 @@ export default {
                 : defaults.annual;
             // 해외 목표 배당: 원화로 얼마인지 옆에 보여줘요
             const goal = n('goal');
-            const fx = isGlobal(market) ? n('fx') : NaN; // 환율 칸은 해외에만 있어요
+            const fx = isGlobal(market) ? getFx() : NaN; // 해외: 맨 위 기준 환율
             goalHint.textContent = goal > 0 && fx > 0
                 ? `≈ ${won(goal * fx)}원 (세금을 떼고 손에 들어오는 금액)`
                 : defaults.goal;
@@ -102,7 +104,7 @@ export default {
             if (tab === 'mine') {
                 result = calculateMyDividend(market, { ...common(), qty: readInt(view, 'qty'), avgPrice: n('avgPrice') });
                 const r = result;
-                renderMineResult(resultEl, r, market, {
+                renderMineResult(resultEl, r, viewMarket(market), {
                     onSave: () => ctx.addRecord({
                         title: `주당 ${price(r.dps, market)} × ${freqOf(r.freq).label} · ${won(r.qty)}주`,
                         sub: '내 배당',
@@ -124,7 +126,7 @@ export default {
                     cash: n('cash'),
                 });
                 const r = result;
-                renderGoalResult(resultEl, r, market, {
+                renderGoalResult(resultEl, r, viewMarket(market), {
                     onSave: () => ctx.addRecord({
                         title: `${r.period === 'year' ? '1년' : '한 달'} ${money(r.goal, market)} 목표 · 주가 ${price(r.price, market)}`,
                         sub: '목표 배당',

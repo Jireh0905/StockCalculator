@@ -43,11 +43,7 @@ function settings(market) {
                         <span class="input-wrap"><input name="taxBase" inputmode="numeric" data-int value="${g.taxBase}" autocomplete="off"><span class="unit">원</span></span>
                     </label>
                 </div>
-                <label class="field">
-                    <span class="field-label">환율 <span class="field-optional">양도세·원화 환산</span></span>
-                    <span class="input-wrap"><input name="fx" inputmode="decimal" value="${g.fxRate}" autocomplete="off"><span class="unit">원</span></span>
-                    <span class="hint">기간 내내 같은 환율이라고 보고 계산해요</span>
-                </label>` : ''}
+                <p class="hint">양도세는 맨 위 기준 환율이 기간 내내 같다고 보고 원화로 계산해요.</p>` : ''}
             </div>
         </details>`;
 }

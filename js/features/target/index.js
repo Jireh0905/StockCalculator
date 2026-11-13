@@ -7,7 +7,7 @@
 import { calculateTarget, calculateTargetGlobal, calculateTargetFx } from './calculator.js';
 import { bindNumberInputs, readValues, fillValues, readNumber } from '../../core/number-input.js';
 import { showReceived } from '../../core/received.js';
-import { MARKETS, isGlobal, moneyInput, ex, price, money, bigMoney, inputText } from '../../core/market.js';
+import { MARKETS, isGlobal, moneyInput, ex, price, money, bigMoney, inputText, krwLine, fxToggle, viewMarket, useRate } from '../../core/market.js';
 import { won } from '../../core/format.js';
 
 function template(market) {
@@ -118,8 +118,10 @@ function renderResult(el, r, market, { onSave, fx = null, goalRate }) {
         : `<p class="note">실제 주문은 호가 단위(가격 단계)에 맞춰야 해서, 위 가격보다 한 단계 높은 호가로 내면 돼요.</p>`;
 
     el.innerHTML = `
+        ${fxToggle(market)}
         <div class="result-label">목표 매도가 <span class="result-label-sub">(${global ? '수수료 반영, 양도세 공제 안' : '수수료·세금 반영'})</span></div>
         <div class="result-amount" style="color:var(--up)">${bigMoney(r.target, market)}</div>
+        ${krwLine(r.target, market)}
         <span class="rate-pill pill-up">▲ ${r.targetRise.toFixed(2)}% 올라야 해요</span>
         <ul class="rows">
             <li><span>본전 매도가</span><span>${money(r.breakEven, market)}</span></li>
@@ -142,6 +144,7 @@ export default {
     icon: 'target',
     color: 'c3',
     markets: true,
+    fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
      * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 분할 매수 → "목표가 계산")
@@ -177,7 +180,8 @@ export default {
 
             const input = readInput(view);
             result = calculate(input);
-            renderResult(resultEl, result, market, {
+            useRate(input.fxSell); // 팔 때 예상 환율을 넣었으면 원화 환산도 그 환율로
+            renderResult(resultEl, result, viewMarket(market), {
                 fx: isGlobal(market) ? calculateTargetFx(input) : null,
                 goalRate: input.goalRate,
                 onSave: () => {

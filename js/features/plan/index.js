@@ -15,7 +15,7 @@ import { planAveraging, planStopRebuy } from './calculator.js';
 import { renderAvgResult, renderStopResult, stepMessage, signedPercent } from './result-view.js';
 import { bindNumberInputs, readValues, fillValues, readNumber, readInt } from '../../core/number-input.js';
 import { won } from '../../core/format.js';
-import { price, money, signedMoney, isGlobal, inputText } from '../../core/market.js';
+import { price, money, signedMoney, isGlobal, inputText, viewMarket } from '../../core/market.js';
 import { showReceived } from '../../core/received.js';
 
 const MAX_STEPS = 10;
@@ -29,6 +29,7 @@ export default {
     icon: 'plan',
     color: 'c6',
     markets: true,
+    fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
      * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 손익 계산기에서 손실 → "하락 대응 계산")
@@ -150,7 +151,7 @@ export default {
 
             if (tab === 'avg') {
                 const r = avgResult;
-                renderAvgResult(resultEl, r, stopResult, market, {
+                renderAvgResult(resultEl, r, stopResult, viewMarket(market), {
                     onSave: () => ctx.addRecord({
                         title: `평단 ${price(r.avgPrice, market)} × ${won(r.holdQty)}주 · ${r.valid.length}단계 물타기`,
                         sub: '물타기 계획',
@@ -171,7 +172,7 @@ export default {
                 });
             } else {
                 const r = stopResult;
-                renderStopResult(resultEl, r, avgResult, market, {
+                renderStopResult(resultEl, r, avgResult, viewMarket(market), {
                     onSave: () => ctx.addRecord({
                         title: `평단 ${price(r.avgPrice, market)} × ${won(r.holdQty)}주 · 손절 ${price(r.stopPrice, market)} → 재매수 ${price(r.rebuyPrice, market)}`,
                         sub: '손절 후 재매수',

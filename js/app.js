@@ -20,7 +20,8 @@ import { setupDrawer, renderNav, closeDrawer } from './shell/drawer.js';
 import { setupHistorySheet, renderHistory, closeSheet } from './shell/history-sheet.js';
 import * as session from './core/session.js';
 import { showToast } from './core/toast.js';
-import { renderMarketBar, MARKETS } from './core/market.js';
+import { renderMarketBar, MARKETS, isGlobal, useRate } from './core/market.js';
+import { setupMoneyInputs } from './core/money-input.js';
 
 const APP_NAME = 'Jireh';
 
@@ -54,8 +55,12 @@ function findRoute() {
     return featureById(id);
 }
 
-/** 주소에 맞는 화면을 그려요 */
-function render() {
+/**
+ * 주소에 맞는 화면을 그려요
+ * @param {{ keepScroll?: boolean }} [options] - keepScroll: 같은 화면을 다시 그릴 때 스크롤 위치 유지 ([$ | 원], 기준 환율)
+ */
+function render({ keepScroll = false } = {}) {
+    const scrollY = window.scrollY;
     current = findRoute();
     if (!current && location.hash && location.hash !== '#/') {
         history.replaceState(null, '', '#/'); // 잘못된 주소는 홈 주소로 바로잡기
@@ -84,9 +89,18 @@ function render() {
             renderMarketBar(bar, session.getMarket(), (market) => {
                 session.setMarket(market);
                 render(); // 같은 기능을 새 시장으로 다시 그려요 (입력값은 시장마다 따로 기억)
+            }, (rate, date) => {
+                session.setFx(rate, date);
+                render({ keepScroll: true }); // 새 기준 환율로 입력 안내·결과를 다시
+                showToast(date
+                    ? `${date.slice(5).replace('-', '/')} 환율 ${rate.toLocaleString('ko-KR')}원을 넣었어요`
+                    : '기준 환율을 바꿨어요');
             });
         }
+        useRate(null); // 원화 환산 환율은 기준 환율에서 시작 (기능이 자기 환율을 정하면 바꿔요)
         current.mount(root, createContext(current, received));
+        // 해외 달러 칸에 $/₩ 버튼 (원화로 넣으면 기준 환율로 나눠 달러로 넣어요)
+        if (current.fx && isGlobal(session.getMarket())) setupMoneyInputs(root, current.id);
     } else {
         $('pageTitle').textContent = APP_NAME;
         document.title = APP_NAME;
@@ -98,7 +112,7 @@ function render() {
     refreshHistory();
     closeDrawer();
     closeSheet();
-    window.scrollTo(0, 0);
+    window.scrollTo(0, keepScroll ? scrollY : 0);
 }
 
 /* ---------- 입력값 (국내/해외를 쓰는 기능은 시장별로 나눠 저장) ---------- */
@@ -254,5 +268,13 @@ session.subscribe(() => {
     if (!current) showHome();
 });
 
-window.addEventListener('hashchange', render); // 메뉴·카드·뒤로가기 → 주소 변경 → 화면 교체
+// 해외 결과 카드의 [$ | 원] 버튼: 고른 단위를 기억하고 같은 화면을 다시 그려요 (모든 계산기가 함께 따라가요)
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-fx-view]');
+    if (!btn || btn.getAttribute('aria-pressed') === 'true') return;
+    session.setFxView(btn.dataset.fxView);
+    render({ keepScroll: true });
+});
+
+window.addEventListener('hashchange', () => render()); // 메뉴·카드·뒤로가기 → 주소 변경 → 화면 교체
 render();

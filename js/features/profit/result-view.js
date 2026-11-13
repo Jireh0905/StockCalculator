@@ -6,6 +6,7 @@
  */
 import { won, signedWon, percent } from '../../core/format.js';
 import { fxSplitHtml, fxHintHtml } from '../../core/fx-split.js';
+import { usdLine } from '../../core/market.js';
 
 /**
  * @param {HTMLElement} container - 결과를 그릴 영역
@@ -47,6 +48,7 @@ export function renderResult(container, r, { onSave, onSendToRecover, onSendToPl
     container.innerHTML = `
         <div class="result-label">예상 순손익 <span style="font-weight:400;color:var(--text-3)">(수수료·세금 차감)</span></div>
         <div class="result-amount">${signedWon(r.net)}<small>원</small></div>
+        ${r.type === 'global' ? usdLine(r.net, 'global', true) : ''}
         <span class="rate-pill">${arrow} ${Math.abs(r.rate).toFixed(2)}%</span>
 
         <!-- 두 줄 구성: 위는 이름·금액, 아래는 어떻게 나온 금액인지 (물타기 "매수 내역"과 같은 모양) -->

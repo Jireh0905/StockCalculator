@@ -5,7 +5,7 @@
  * data-values: 이 안의 입력칸은 values 하나로 묶어서 저장해요.
  * 배당 주기·목표 기간처럼 버튼으로 고르는 값은 숨은 입력칸(type="hidden")에 넣어 같이 저장해요.
  */
-import { isGlobal, moneyInput, ex, MARKETS } from '../../core/market.js';
+import { isGlobal, moneyInput, ex } from '../../core/market.js';
 import { FREQS } from './calculator.js';
 
 /** 해외 배당 기본 세율: 미국 원천징수 15% */
@@ -26,12 +26,7 @@ function choice(name, options, label) {
 
 export function template(market) {
     const global = isGlobal(market);
-    const fx = global ? `
-            <label class="field">
-                <span class="field-label">환율 <span class="field-optional">원화 환산</span></span>
-                <span class="input-wrap"><input name="fx" inputmode="decimal" value="${MARKETS.global.fxRate}" autocomplete="off"><span class="unit">원</span></span>
-                <span class="hint">비우면 달러로만 보여줘요</span>
-            </label>` : '';
+    // 해외 환율은 맨 위 "기준 환율"을 함께 써요 (core/market.js)
 
     return `
 <div class="layout">
@@ -53,7 +48,6 @@ export function template(market) {
                 ${choice('freq', FREQS.map(f => ({ value: String(f.n), label: f.label })), '배당 주기')}
                 <span class="hint" data-hint="annual">1년에 몇 번 받는지 골라주세요</span>
             </div>
-            ${fx}
 
             <details class="settings">
                 <summary>세금 <span class="chip" data-chip></span></summary>

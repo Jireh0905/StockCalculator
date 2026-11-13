@@ -2,7 +2,7 @@
  * split/result-view.js — 분할 매매 결과 카드 그리기 (계산은 하지 않고 보여주기만)
  */
 import { won, signedWon } from '../../core/format.js';
-import { price, money, signedMoney, bigMoney, isGlobal } from '../../core/market.js';
+import { price, money, signedMoney, bigMoney, isGlobal, krwLine, usdLine, fxToggle } from '../../core/market.js';
 import { fxSplitHtml, fxHintHtml } from '../../core/fx-split.js';
 
 /** 등락률 글자: 10 → "+10.0%" */
@@ -54,8 +54,10 @@ export function renderBuyResult(el, r, market, { onSave, onSendToTarget, onSendT
     ].join('');
 
     el.innerHTML = `
+        ${fxToggle(market)}
         <div class="result-label">새 평균 단가</div>
         <div class="result-amount">${bigMoney(r.newAvg, market)}</div>
+        ${krwLine(r.newAvg, market)}
         <span class="rate-pill pill-${dir}">${arrow} ${money(Math.abs(r.change), market)} (${Math.abs(r.changeRate).toFixed(2)}%)</span>
 
         <h3 class="sub-title">매수 내역</h3>
@@ -160,9 +162,11 @@ export function renderSellResult(el, r, market, { onSave }) {
     const label = global
         ? (r.taxReady ? '세후 순이익 <span class="result-label-sub">(원화, 수수료·양도세 차감)</span>' : '손익 합계 <span class="result-label-sub">(수수료 차감, 세금 전)</span>')
         : '실현 순이익 합계 <span class="result-label-sub">(수수료·세금 차감)</span>';
+    // 큰 숫자는 [원] 보기에서도 원래 단위 그대로 (달러 손익은 $로)
+    const cents = Math.round(headline * 100);
     const amount = headIsKrw
         ? `${signedWon(headline)}<small>원</small>`
-        : `${signedMoney(headline, market)}`;
+        : `${cents > 0 ? '+' : cents < 0 ? '−' : ''}${bigMoney(Math.abs(headline), market)}`;
 
     const lines = r.valid.map(s => `
         <li class="buy-line">
@@ -182,9 +186,13 @@ export function renderSellResult(el, r, market, { onSave }) {
         ? `<p class="note">${over.join('·')}는 남은 수량보다 많아서 빼고 계산했어요.</p>` : '';
 
     el.className = `card result-card ${dir}`;
+    // 큰 숫자 아래에 다른 통화로 한 줄 (원화 결과면 달러, 달러 결과면 원화)
+    const other = !global ? '' : headIsKrw ? usdLine(headline, market, true) : krwLine(headline, market, true);
     el.innerHTML = `
+        ${fxToggle(market)}
         <div class="result-label">${label}</div>
         <div class="result-amount">${amount}</div>
+        ${other}
         <span class="rate-pill">${arrow} ${Math.abs(r.rate).toFixed(2)}%</span>
 
         <h3 class="sub-title">단계별 매도 <span class="sub-title-note">받는 돈${global ? ' (세금 전)' : ''}</span></h3>

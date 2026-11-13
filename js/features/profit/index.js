@@ -13,7 +13,7 @@ import { renderResult } from './result-view.js';
 import { bindNumberInputs, readValues, fillValues, readNumber, readInt } from '../../core/number-input.js';
 import { won, usd, signedWon } from '../../core/format.js';
 import { showReceived } from '../../core/received.js';
-import { price, inputText, isGlobal } from '../../core/market.js';
+import { price, inputText, isGlobal, useRate, MARKETS } from '../../core/market.js';
 import { splitFx } from '../../core/fx-split.js';
 
 /** 시장별 입력칸 이름 끝 글자: 국내 buyPriceD, 해외 buyPriceG */
@@ -59,6 +59,7 @@ export default {
     icon: 'profit',
     color: 'c1',
     markets: true,   // 맨 위에 국내/해외 선택 (app.js가 그려줘요)
+    fx: true,        // 해외: 달러 칸 $/₩ 넣기 (app.js·core/money-input.js)
 
     /**
      * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 분할 매수 → "손익 계산")
@@ -92,6 +93,8 @@ export default {
         view.querySelector(`#panel-${tab === 'global' ? 'domestic' : 'global'}`).hidden = true;
         let result = null;
 
+        // 해외 매도 시 환율은 처음엔 맨 위 기준 환율로 (지난 입력값이 있으면 아래에서 그 값으로)
+        view.querySelector('input[name="exchangeRateG"]').value = MARKETS.global.fxRate;
         if (ctx.inputs?.values) fillValues(view, ctx.inputs.values); // 지난 입력값 복원
 
         const remember = () => ctx.saveInputs({ values: readValues(panel) });
@@ -99,6 +102,7 @@ export default {
         function refresh() {
             const input = readInput(view, tab);
             result = calculateProfit(tab, input);
+            useRate(result?.rateSell); // 해외: 달러 환산은 매도 시 환율로
             renderResult(resultEl, result, {
                 onSave: saveRecord,
                 // 해외: 주가로 번 돈 / 환율로 번 돈 나누기 (계산에 쓴 환율 그대로)

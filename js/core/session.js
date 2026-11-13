@@ -67,6 +67,44 @@ export function setMarket(market) {
     persist();
 }
 
+/* ---------- 해외: 기준 환율과 표시 단위 ---------- */
+
+/** 기준 환율 (원/달러). 모든 계산기가 원화↔달러 바꾸기에 함께 써요. 처음이면 1,300원 */
+export function getFx() {
+    return state.fx?.rate > 0 ? state.fx.rate : 1300;
+}
+
+/** 기준 환율이 어디서 왔는지: { date: '2026-11-12' } (오늘 환율 불러오기) 또는 null (직접 입력) */
+export function getFxSource() {
+    return state.fx?.date ? { date: state.fx.date } : null;
+}
+
+/** @param {number} rate @param {string | null} [date] - 불러온 환율이면 기준 날짜 */
+export function setFx(rate, date = null) {
+    state.fx = { rate, date };
+    persist();
+}
+
+/** 해외 결과의 세부 금액을 'usd'(달러) / 'krw'(원화 환산) 중 무엇으로 보여줄지 */
+export function getFxView() {
+    return state.fxView === 'krw' ? 'krw' : 'usd';
+}
+
+export function setFxView(view) {
+    state.fxView = view;
+    persist();
+}
+
+/** 입력칸마다 고른 입력 통화 ('krw'면 원화로 넣기). 키: "기능.칸이름" */
+export function getInputCurrency(key) {
+    return state.inputCurrency?.[key] === 'krw' ? 'krw' : 'usd';
+}
+
+export function setInputCurrency(key, currency) {
+    state.inputCurrency = { ...state.inputCurrency, [key]: currency };
+    persist();
+}
+
 /* ---------- 입력값 ---------- */
 
 /** 기능의 마지막 입력값 (없으면 null) */

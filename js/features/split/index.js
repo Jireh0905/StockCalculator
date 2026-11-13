@@ -15,7 +15,7 @@ import { calculateAverage, calculateSplitSell } from './calculator.js';
 import { renderBuyResult, renderSellResult, signedPercent } from './result-view.js';
 import { bindNumberInputs, readValues, fillValues, readNumber, readInt } from '../../core/number-input.js';
 import { won, signedWon } from '../../core/format.js';
-import { price, money, signedMoney, inputText, isGlobal } from '../../core/market.js';
+import { price, money, signedMoney, inputText, isGlobal, viewMarket, useRate } from '../../core/market.js';
 import { showReceived } from '../../core/received.js';
 
 const MAX_ROWS = 10;
@@ -69,6 +69,7 @@ export default {
     icon: 'average',
     color: 'c2',
     markets: true,
+    fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
      * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. 보유 주식(평단·수량)은 항상 받은 값으로 바꾸고,
@@ -172,7 +173,7 @@ export default {
             if (tab === 'buy') {
                 result = calculateAverage(readBuy());
                 const r = result;
-                renderBuyResult(resultEl, r, market, {
+                renderBuyResult(resultEl, r, viewMarket(market), {
                     onSave: () => {
                         const extra = r.usedCount > 1 ? `${r.usedCount}건` : price(r.steps[0].price, market);
                         ctx.addRecord({
@@ -203,7 +204,8 @@ export default {
                 result = calculateSplitSell(market, readSell());
                 const r = result;
                 updateSellHints(r);
-                renderSellResult(resultEl, r, market, {
+                useRate(r?.taxReady ? r.rateSell : null); // 원화로 볼 때는 매도 시 환율로
+                renderSellResult(resultEl, r, viewMarket(market), {
                     onSave: () => {
                         const krw = !isGlobal(market) || r.taxReady;
                         const net = isGlobal(market) && r.taxReady ? r.net : r.pl;
