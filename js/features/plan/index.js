@@ -32,6 +32,14 @@ export default {
     fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
+     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (국내만, core/stock-bar.js가 불러요)
+     * 현재가 → 현재가 칸 (평단·보유 수량은 내 값이라 그대로).
+     */
+    stockFill({ view, data }) {
+        return { fields: [{ input: view.querySelector('input[name="curPrice"]'), value: inputText(data.price), label: `현재가 ${won(data.price)}원` }] };
+    },
+
+    /**
      * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 손익 계산기에서 손실 → "하락 대응 계산")
      * 평단·보유 수량·현재가만 바꾸고, 물타기 단계·손절 계획·수수료는 그대로 둬요.
      *

@@ -62,6 +62,18 @@ export default {
     fx: true,        // 해외: 달러 칸 $/₩ 넣기 (app.js·core/money-input.js)
 
     /**
+     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (국내만, core/stock-bar.js가 불러요)
+     * 현재가 → 매도가. 매수가는 내 값이라 비어 있으면 커서만 그 칸으로.
+     */
+    stockFill({ view, data }) {
+        const buy = view.querySelector('input[name="buyPriceD"]');
+        return {
+            fields: [{ input: view.querySelector('input[name="sellPriceD"]'), value: inputText(data.price), label: `매도가 ${won(data.price)}원` }],
+            focus: buy.value ? null : buy,
+        };
+    },
+
+    /**
      * 다른 기능이 값을 넘겨줄 때 app.js가 불러요.
      *   분할 매수 → "손익 계산": 매수가·수량
      *   종목 정보 → "손익 계산": 현재가를 매도가로 (sellPrice)

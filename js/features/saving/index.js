@@ -33,6 +33,19 @@ export default {
     fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
+     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (국내만, core/stock-bar.js가 불러요)
+     * 1년 주당 배당금 ÷ 현재가 → 배당 수익률 (주가 상승률은 예상이라 그대로).
+     */
+    stockFill({ view, data }) {
+        if (!(data.dps > 0)) return { fields: [], note: '배당 정보가 없는 종목이에요' };
+        const pct = (data.dps / data.price * 100).toFixed(2);
+        return {
+            fields: [{ input: view.querySelector('input[name="divYield"]'), value: pct, label: `배당 수익률 ${pct}%` }],
+            note: `1년 배당 ${won(data.dps)}원 ÷ ${won(data.price)}원`,
+        };
+    },
+
+    /**
      * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 배당 → "적립식으로 보기")
      * 얼마가 될까 탭으로 바꾸고, 처음 넣는 돈·배당 수익률·배당세를 받은 값으로, 배당은 다시 투자로.
      *

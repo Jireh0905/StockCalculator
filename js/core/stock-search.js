@@ -179,7 +179,10 @@ export function createStockSearch(container, { onPick, autofocus = false, placeh
         foot.textContent = `목록 기준 ${+list.updated.slice(5, 7)}/${+list.updated.slice(8, 10)} · ${list.items.length.toLocaleString('ko-KR')}개 (코스피·코스닥·ETF)`;
     }).catch(() => {});
 
-    if (autofocus) input.focus();
+    if (autofocus) {
+        input.focus();
+        update();   // 창이 비활성일 때는 focus 이벤트가 안 와서, 최근 본 종목을 직접 보여줘요
+    }
     return {
         input,
         clear: () => { input.value = ''; render([], ''); },

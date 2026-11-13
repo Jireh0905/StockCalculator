@@ -147,6 +147,14 @@ export default {
     fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
+     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (국내만, core/stock-bar.js가 불러요)
+     * 현재가 → 매수가 ("지금 사면 목표가는?").
+     */
+    stockFill({ view, data }) {
+        return { fields: [{ input: view.querySelector('input[name="buyPrice"]'), value: inputText(data.price), label: `매수가 ${won(data.price)}원` }] };
+    },
+
+    /**
      * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 분할 매수 → "목표가 계산")
      * 매수가만 바꾸고, 목표 수익률·수수료·세금은 원래 넣어둔 값을 그대로 둬요.
      *

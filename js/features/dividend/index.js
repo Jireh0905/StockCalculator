@@ -33,6 +33,18 @@ export default {
     fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
+     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (국내만, core/stock-bar.js가 불러요)
+     * 현재가 → 주가, 1년 주당 배당금 ÷ 지금 고른 배당 주기 → 주당 배당금(1회). 배당 정보가 없으면 주가만.
+     */
+    stockFill({ view, data }) {
+        const fields = [{ input: view.querySelector('input[name="price"]'), value: inputText(data.price), label: `주가 ${won(data.price)}원` }];
+        if (!(data.dps > 0)) return { fields, note: '배당 정보가 없어서 주당 배당금은 그대로 둬요' };
+        const freq = freqOf(Number(view.querySelector('input[name="freq"]').value) || 1);
+        fields.push({ input: view.querySelector('input[name="dps"]'), value: inputText(data.dps / freq.n), label: `${freq.label} 배당 ${won(data.dps / freq.n)}원` });
+        return { fields, note: freq.n > 1 ? `1년 ${won(data.dps)}원 ÷ ${freq.n}` : null };
+    },
+
+    /**
      * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 분할 매수 → "배당 계산")
      * 내 배당 탭으로 바꾸고 보유 수량·내 평단만 바꿔요. 주가·배당금·주기는 그대로 둬요.
      *

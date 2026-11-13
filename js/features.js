@@ -10,6 +10,7 @@
  *     (group이 같은 기능끼리는 계산 기록을 함께 봐요)
  *     markets: true           맨 위에 국내/해외 선택 버튼 (모든 계산기가 같은 선택을 따라가요)
  *     records: false          기록에 저장할 게 없는 화면 (상단 기록 버튼을 숨겨요)
+ *     stockFill({view,data})  국내/해외 줄 아래 종목 검색 줄 → 고른 종목 시세로 채울 칸 (core/stock-bar.js)
  *     mount(container, ctx)   화면을 그리고 이벤트를 연결 (OnInitialUpdate 같은 역할)
  *     receive(inputs, payload, market)   다른 기능이 값을 넘겨줄 때 (선택)
  *   }

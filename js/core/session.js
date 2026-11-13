@@ -120,6 +120,19 @@ export function addRecentStock(stock) {
     persist();
 }
 
+/**
+ * 계산기마다 고른 종목 (계산기 위 종목 검색 줄, core/stock-bar.js)
+ * { code, name, market, price, change, rate, time } — 마지막으로 받은 시세까지 같이 기억해요
+ */
+export function getStockOf(featureId) {
+    return state.stockOf?.[featureId] ?? null;
+}
+
+export function setStockOf(featureId, stock) {
+    state.stockOf = { ...state.stockOf, [featureId]: stock };
+    persist();
+}
+
 /* ---------- 입력값 ---------- */
 
 /** 기능의 마지막 입력값 (없으면 null) */

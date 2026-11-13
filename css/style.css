@@ -1439,6 +1439,39 @@ body.sheet-open .sheet { transform: translate(-50%, 0); visibility: visible; }
 .ss-empty.is-error { color: var(--up); }
 .ss-foot { margin: 6px 2px 0; font-size: 0.6875rem; color: var(--text-3); }
 
+/* ---------- 계산기 위 종목 검색 줄 (core/stock-bar.js) ---------- */
+.stock-bar { position: relative; z-index: 6; max-width: 480px; margin: -2px auto 12px; }
+.stock-bar .ss-input input { height: 44px; font-size: 0.9375rem; }
+.stock-bar .ss-list { top: calc(100% + 4px); }
+.sb-picked {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 6px 6px 6px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+.sb-info { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.sb-name { min-width: 0; font-size: 0.9375rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-name small { margin-left: 5px; font-size: 0.75rem; color: var(--text-3); }
+.sb-price { font-size: 0.875rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sb-price .tone-up { color: var(--up); }
+.sb-price .tone-down { color: var(--down); }
+.sb-price small { margin-left: 4px; font-size: 0.6875rem; font-weight: 500; color: var(--text-3); }
+.sb-refresh { margin-left: 0; padding: 4px 10px; font-size: 0.75rem; }
+.sb-refresh:disabled { color: var(--text-3); cursor: default; }
+.sb-msg { margin: 4px 4px 0; font-size: 0.75rem; color: var(--text-3); }
+.sb-msg:empty { display: none; }
+.sb-msg.is-error { color: var(--up); }
+.sb-note { margin: 0; padding: 0 4px; font-size: 0.75rem; color: var(--text-3); }
+.stock-bar .ss-input input:disabled { opacity: .6; }
+@container (min-width: 760px) {
+    .stock-bar { max-width: 920px; }
+    .stock-bar > * { max-width: calc(50% - 10px); }
+}
+
 /* ---------- 종목 정보 (features/stock) ---------- */
 .st-page { max-width: 480px; margin: 0 auto; }
 .st-search { position: relative; z-index: 5; padding: 14px 14px 10px; }

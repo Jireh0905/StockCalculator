@@ -22,6 +22,7 @@ import * as session from './core/session.js';
 import { showToast } from './core/toast.js';
 import { renderMarketBar, MARKETS, isGlobal, useRate } from './core/market.js';
 import { setupMoneyInputs } from './core/money-input.js';
+import { renderStockBar, renderStockBarNote } from './core/stock-bar.js';
 import { watchNetwork, isOnline, onNetworkChange, checkNow } from './core/network.js';
 
 const APP_NAME = 'Jireh';
@@ -82,11 +83,13 @@ function render({ keepScroll = false } = {}) {
         $('pageTitle').textContent = current.name;
         document.title = `${current.name} · ${APP_NAME}`;
         let root = page;
+        let stockBar = null;   // 종목 검색 줄 자리 (stockFill이 있는 계산기만)
         // 국내/해외를 쓰는 기능: 맨 위에 선택 버튼, 그 아래에 기능 화면
         if (current.markets) {
             const bar = document.createElement('div');
+            if (current.stockFill) stockBar = document.createElement('div');
             root = document.createElement('div');
-            page.append(bar, root);
+            page.append(...[bar, stockBar, root].filter(Boolean));
             renderMarketBar(bar, session.getMarket(), (market) => {
                 session.setMarket(market);
                 render(); // 같은 기능을 새 시장으로 다시 그려요 (입력값은 시장마다 따로 기억)
@@ -100,6 +103,12 @@ function render({ keepScroll = false } = {}) {
         }
         useRate(null); // 원화 환산 환율은 기준 환율에서 시작 (기능이 자기 환율을 정하면 바꿔요)
         current.mount(root, createContext(current, received));
+        // 종목 검색 줄 (국내/해외 줄 아래): 고르면 계산기의 stockFill이 정한 칸을 채워요. 해외는 안내 한 줄
+        if (stockBar) {
+            const viewRoot = root;
+            if (isGlobal(session.getMarket())) renderStockBarNote(stockBar);
+            else renderStockBar(stockBar, { featureId: current.id, getView: () => viewRoot, fill: current.stockFill });
+        }
         // 해외 달러 칸에 $/₩ 버튼 (원화로 넣으면 기준 환율로 나눠 달러로 넣어요)
         if (current.fx && isGlobal(session.getMarket())) setupMoneyInputs(root, current.id);
     } else {
