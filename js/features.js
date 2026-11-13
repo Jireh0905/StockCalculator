@@ -9,6 +9,7 @@
  *     id, name, shortName, desc, group, icon, color,
  *     (group이 같은 기능끼리는 계산 기록을 함께 봐요)
  *     markets: true           맨 위에 국내/해외 선택 버튼 (모든 계산기가 같은 선택을 따라가요)
+ *     records: false          기록에 저장할 게 없는 화면 (상단 기록 버튼을 숨겨요)
  *     mount(container, ctx)   화면을 그리고 이벤트를 연결 (OnInitialUpdate 같은 역할)
  *     receive(inputs, payload, market)   다른 기능이 값을 넘겨줄 때 (선택)
  *   }
@@ -27,15 +28,16 @@ import plan from './features/plan/index.js';
 import dividend from './features/dividend/index.js';
 import saving from './features/saving/index.js';
 import recover from './features/recover/index.js';
+import fx from './features/fx/index.js';
 
 export const FEATURES = [
     profit,
     split,
     plan,   // 물타기·손절 계획이라 분할 매매 바로 아래에
     target,
-    // 아직 만들지 않은 기능: mount가 없고 soon: true → 메뉴에 "준비 중"으로 보여요
     dividend,
     saving,
     recover,
-    { id: 'fx', name: '환율·시세', desc: '실시간 데이터 (서버가 필요해서 6단계에서)', group: '정보', icon: 'fx', color: 'c5', soon: true },
+    fx,     // 시장 지표: 계산기가 아니라 '정보' 묶음 (records: false → 기록 버튼 없음)
+    // 아직 만들지 않은 기능은 mount 없이 soon: true로 넣으면 메뉴에 "준비 중"으로 보여요
 ];

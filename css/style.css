@@ -93,10 +93,14 @@ button { font: inherit; color: inherit; }
     cursor: pointer;
 }
 .icon-btn:hover { background: var(--border); }
-.session-chip {
+/* 인터넷 연결 표시 (core/network.js → app.js). 오른쪽: [● 온라인] [기록] */
+.net-chip {
+    flex-shrink: 0;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
+    min-width: 30px;
     height: 30px;
     padding: 0 12px;
     border: 1px solid var(--border);
@@ -106,11 +110,29 @@ button { font: inherit; color: inherit; }
     font-weight: 600;
     color: var(--text-3);
     white-space: nowrap;
+    cursor: pointer;
 }
-.session-chip i { width: 6px; height: 6px; border-radius: 50%; background: #40c057; }
-/* 홈에서는 "임시 저장 중" 표시, 기능 화면에서는 "기록" 버튼 (app.js가 body에 data-page를 붙여줌) */
+.net-chip i { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: #40c057; }
+.net-chip[data-state="offline"] {
+    border-color: color-mix(in srgb, var(--up) 35%, var(--border));
+    background: var(--up-weak);
+    color: var(--up);
+}
+.net-chip[data-state="offline"] i { background: var(--up); }
+/* 휴대폰에서 기록 버튼과 같이 있을 때: 온라인은 점만 (제목이 잘리지 않게). 오프라인은 늘 글자까지 */
+@media (max-width: 480px) {
+    body[data-page="feature"] .net-chip[data-state="online"] { padding: 0; }
+    body[data-page="feature"] .net-chip[data-state="online"] .net-label {
+        position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); /* 화면 낭독기에는 읽혀요 */
+    }
+}
+/* 기록 버튼은 계산기(feature)에서만 (app.js가 body에 data-page를 붙여줌) */
 body[data-page="home"] .history-btn,
-body[data-page="feature"] .session-chip { display: none; }
+body[data-page="info"] .history-btn { display: none; }
+/* "인터넷 연결 없음" 같은 글자: 오프라인일 때만 (app.js가 body에 data-net을 붙여줌) */
+.net-note { display: none; }
+body[data-net="offline"] .net-note { display: inline; color: var(--up); }
+body[data-net="offline"] .fx-line [data-fx-src] { display: none; }
 
 /* ---------- 왼쪽 메뉴 (휴대폰: 서랍) ---------- */
 .drawer {
@@ -298,8 +320,10 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
 .c6 { background: #f3f0ff; color: #7048e8; }
 .c7 { background: #e3fafc; color: #0c8599; }
 .c8 { background: #fff0f6; color: #d6336c; }
+.c9 { background: #fff9db; color: #e67700; }
 @media (prefers-color-scheme: dark) {
     .c8 { background: #3a1a28; color: #f06595; }
+    .c9 { background: #3a3014; color: #fcc419; }
     .c3 { background: #3a2a14; }
     .c4 { background: #16301c; }
     .c6 { background: #2a2244; color: #9775fa; }
@@ -1262,6 +1286,100 @@ body.sheet-open .sheet { transform: translate(-50%, 0); visibility: visible; }
     background: var(--surface);
     color: var(--primary);
     box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+
+/* ---------- 시장 지표 (features/fx) ---------- */
+.mk-page { max-width: 480px; margin: 0 auto; }
+.mk-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 8px 4px 12px;
+}
+.mk-updated { margin: 0; font-size: 0.8125rem; color: var(--text-3); }
+.mk-updated.is-offline { color: var(--up); }
+.mk-msg .mini-btn:disabled, .mk-stale:disabled { opacity: .5; cursor: default; }
+.mk-refresh { width: auto; margin: 0; padding: 6px 14px; }
+.mk-refresh:disabled { color: var(--text-3); cursor: default; }
+.mk-card .card-title { margin-bottom: 2px; }
+.mk-meta { margin: 0 0 6px; font-size: 0.75rem; color: var(--text-3); }
+.mk-list { margin: 0; padding: 0; list-style: none; }
+/* 한 줄: 이름(아래 작은 설명) ··· 값(아래 변화) */
+.mk-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
+}
+.mk-row:last-child { border-bottom: 0; }
+.mk-name { min-width: 0; font-size: 0.9375rem; color: var(--text-2); }
+.mk-name small { display: block; margin-top: 1px; font-size: 0.6875rem; color: var(--text-3); }
+.mk-val { flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.mk-val b { display: block; font-size: 1rem; font-weight: 700; color: var(--text); white-space: nowrap; }
+.mk-val b .tone-up { color: var(--up); }
+.mk-val b .tone-down { color: var(--down); }
+.mk-chg { display: block; margin-top: 1px; font-size: 0.75rem; font-weight: 600; color: var(--text-3); white-space: nowrap; }
+.mk-chg.tone-up { color: var(--up); }
+.mk-chg.tone-down { color: var(--down); }
+.mk-tag { font-style: normal; font-weight: 700; color: var(--up); }
+/* 묶음 제목: "국채 금리   미국 재무부 · 11/12 기준" */
+.mk-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+    margin-top: 14px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8125rem;
+}
+.mk-section:first-child { margin-top: 6px; }
+.mk-section b { color: var(--text-2); }
+.mk-section span { font-size: 0.75rem; color: var(--text-3); }
+.mk-gap { height: 4px; }
+/* 불러오는 중 / 실패 */
+.mk-msg {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    font-size: 0.8125rem;
+    color: var(--text-3);
+}
+.mk-msg.is-error { color: var(--up); }
+.mk-stale {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--up);
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+.mk-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    margin: 10px 0 0;
+    font-size: 0.75rem;
+    color: var(--text-3);
+}
+.mk-foot .mini-btn { margin-left: 0; padding: 5px 10px; font-size: 0.75rem; }
+.mk-note { margin: 10px 0 0; font-size: 0.6875rem; line-height: 1.5; color: var(--text-3); }
+
+/* 넓을 때: 왼쪽에 환율·금/비트코인, 오른쪽에 미국 금리 (좁을 때는 환율 → 금리 → 금/비트코인 순서로 한 줄씩) */
+@container (min-width: 760px) {
+    .mk-page { max-width: 920px; }
+    .mk-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas: "fx rates" "coin rates";
+        gap: 0 20px;
+        align-items: start;
+    }
 }
 
 /* ---------- 키보드로 이동할 때만 포커스 테두리 표시 ---------- */

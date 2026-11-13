@@ -13,6 +13,7 @@
  */
 import { won, wonPrecise, usd } from './format.js';
 import { getFx, getFxSource, getFxView } from './session.js';
+import { netFetch, isOnline } from './network.js';
 
 export const MARKETS = {
     domestic: {
@@ -177,7 +178,7 @@ export const ex = (market, domestic, global) => (isGlobal(market) ? global : dom
  * @returns {Promise<{ rate: number, date: string }>}
  */
 export async function fetchTodayFx() {
-    const res = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW');
+    const res = await netFetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW'); // 실패하면 연결 확인
     if (!res.ok) throw new Error(`환율 응답 ${res.status}`);
     const json = await res.json();
     const rate = json?.rates?.KRW;
@@ -206,8 +207,9 @@ export function renderMarketBar(container, market, onChange, onFx) {
         <div class="fx-line">
             <span class="fx-line-label">기준 환율</span>
             <span class="input-wrap fx-line-input"><input data-fx-rate inputmode="decimal" value="${wonPrecise(getFx())}" autocomplete="off" aria-label="기준 환율 (원)"><span class="unit">원</span></span>
-            <button type="button" class="mini-btn" data-fx-fetch>오늘 환율</button>
+            <button type="button" class="mini-btn" data-fx-fetch data-needs-net ${isOnline() ? '' : 'disabled'}>오늘 환율</button>
             <span class="fx-line-src" data-fx-src>${src ? `${src.date.slice(5).replace('-', '/')} 기준` : '직접 입력'}</span>
+            <span class="fx-line-src net-note">연결 없음</span>
         </div>` : ''}`;
 
     container.addEventListener('click', async (e) => {
@@ -217,12 +219,14 @@ export function renderMarketBar(container, market, onChange, onFx) {
         const fetchBtn = e.target.closest('[data-fx-fetch]');
         if (fetchBtn) {
             fetchBtn.disabled = true;
+            fetchBtn.toggleAttribute('data-busy', true); // 불러오는 중에 연결이 돌아와도 다시 켜지지 않게
             fetchBtn.textContent = '불러오는 중…';
             try {
                 const { rate, date } = await fetchTodayFx();
                 onFx(Math.round(rate * 100) / 100, date);
             } catch (err) {
-                fetchBtn.disabled = false;
+                fetchBtn.removeAttribute('data-busy');
+                fetchBtn.disabled = !isOnline();
                 fetchBtn.textContent = '오늘 환율';
                 container.querySelector('[data-fx-src]').textContent = '불러오지 못했어요';
             }

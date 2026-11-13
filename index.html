@@ -39,7 +39,8 @@
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
             <h1 id="pageTitle">Jireh</h1>
-            <span class="session-chip" title="이 창을 닫으면 초기화돼요"><i></i>임시 저장 중</span>
+            <!-- 인터넷 연결 상태 (js/core/network.js가 알려주면 app.js가 바꿔요). 누르면 설명 + 다시 확인 -->
+            <button type="button" class="net-chip" id="netStatus" data-state="online"><i></i><span class="net-label">온라인</span></button>
             <button type="button" class="history-btn" id="historyBtn" aria-haspopup="dialog">
                 기록 <span class="badge" id="historyCount"></span>
             </button>

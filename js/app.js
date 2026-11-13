@@ -22,6 +22,7 @@ import * as session from './core/session.js';
 import { showToast } from './core/toast.js';
 import { renderMarketBar, MARKETS, isGlobal, useRate } from './core/market.js';
 import { setupMoneyInputs } from './core/money-input.js';
+import { watchNetwork, isOnline, onNetworkChange, checkNow } from './core/network.js';
 
 const APP_NAME = 'Jireh';
 
@@ -107,7 +108,9 @@ function render({ keepScroll = false } = {}) {
         showHome();
     }
 
-    document.body.dataset.page = current ? 'feature' : 'home'; // 상단 바 버튼 전환용 (CSS)
+    // 상단 바 버튼 전환용 (CSS): 계산기(feature)만 "기록" 버튼
+    document.body.dataset.page = !current ? 'home' : current.records === false ? 'info' : 'feature';
+    applyNetwork(); // 새로 그린 화면의 "인터넷이 필요한 버튼"도 지금 연결 상태에 맞게
     renderNav(FEATURES, current ? current.id : 'home');
     refreshHistory();
     closeDrawer();
@@ -252,7 +255,46 @@ function clearVisibleRecords() {
     if (confirm(`${what} ${count}개를 모두 지울까요?`)) session.clearRecords(ids);
 }
 
+/* ---------- 인터넷 연결 표시 ---------- */
+
+const NET_TEXT = {
+    online: { label: '온라인', title: '인터넷에 연결돼 있어요' },
+    offline: { label: '오프라인', title: '인터넷 연결이 없어요. 계산기는 그대로 쓸 수 있어요' },
+};
+
+/**
+ * 연결 상태를 화면에 반영해요. 화면을 다시 그리지 않고 필요한 곳만 바꿔서, 입력 중인 칸의 커서가 그대로예요.
+ *  - 상단 바 연결 표시 (index.html에 있어서 화면을 바꿔도 계속 남아요)
+ *  - body[data-net]: CSS가 "인터넷 연결 없음" 같은 글자를 보이고 숨겨요
+ *  - data-needs-net 버튼: 오프라인이면 끄고, 온라인이면 켜요
+ *    (data-busy가 붙은 버튼 = 불러오는 중이라 일부러 꺼둔 것 → 켜지 않아요)
+ */
+function applyNetwork() {
+    const state = isOnline() ? 'online' : 'offline';
+    const chip = $('netStatus');
+    chip.dataset.state = state;
+    chip.querySelector('.net-label').textContent = NET_TEXT[state].label;
+    chip.title = NET_TEXT[state].title;
+    chip.setAttribute('aria-label', NET_TEXT[state].title);
+    document.body.dataset.net = state;
+    document.querySelectorAll('[data-needs-net]').forEach(btn => {
+        if (state === 'offline') btn.disabled = true;
+        else if (!btn.hasAttribute('data-busy')) btn.disabled = false;
+    });
+}
+
 /* ---------- 시작 ---------- */
+watchNetwork();
+onNetworkChange((online) => {
+    applyNetwork();
+    showToast(online ? '인터넷에 다시 연결됐어요' : '인터넷 연결이 끊겼어요');
+});
+// 연결 표시를 누르면: 설명을 보여주고 지금 다시 확인해요 (휴대폰은 마우스를 올려 설명을 볼 수 없어서)
+$('netStatus').addEventListener('click', async () => {
+    const ok = await checkNow();
+    showToast(NET_TEXT[ok ? 'online' : 'offline'].title);
+});
+
 setupDrawer({
     onReset: () => {
         session.resetAll();
