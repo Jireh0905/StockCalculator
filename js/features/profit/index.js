@@ -62,20 +62,23 @@ export default {
     fx: true,        // 해외: 달러 칸 $/₩ 넣기 (app.js·core/money-input.js)
 
     /**
-     * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 분할 매수 → "손익 계산")
-     * 매수가·수량만 바꿔요. 매도가, 수수료·세금은 그대로 둬요.
+     * 다른 기능이 값을 넘겨줄 때 app.js가 불러요.
+     *   분할 매수 → "손익 계산": 매수가·수량
+     *   종목 정보 → "손익 계산": 현재가를 매도가로 (sellPrice)
+     * 넘겨받은 칸만 바꾸고, 나머지 칸과 수수료·세금은 그대로 둬요.
      *
      * @param {{ values: object } | null} inputs - 지금 시장의 저장된 입력값 (처음이면 null)
-     * @param {{ buyPrice: number, quantity: number }} payload - 넘겨받은 값 (매수가는 소수 둘째 자리까지)
+     * @param {{ buyPrice?: number, quantity?: number, sellPrice?: number }} payload - 넘겨받은 값 (가격은 소수 둘째 자리까지)
      * @param {'domestic' | 'global'} market - 지금 시장 (국내는 ...D, 해외는 ...G 칸)
      * @returns 새 입력값 (ctx.inputs와 같은 모양)
      */
-    receive(inputs, { buyPrice, quantity }, market) {
+    receive(inputs, { buyPrice, quantity, sellPrice }, market) {
         const s = suffix(market);
-        return {
-            ...inputs,
-            values: { ...inputs?.values, [`buyPrice${s}`]: inputText(buyPrice), [`quantity${s}`]: won(quantity) },
-        };
+        const values = { ...inputs?.values };
+        if (buyPrice != null) values[`buyPrice${s}`] = inputText(buyPrice);
+        if (quantity != null) values[`quantity${s}`] = won(quantity);
+        if (sellPrice != null) values[`sellPrice${s}`] = inputText(sellPrice);
+        return { ...inputs, values };
     },
 
     /**
@@ -153,12 +156,19 @@ export default {
         if (ctx.received) {
             const { from, payload } = ctx.received;
             const s = suffix(tab);
-            showReceived(view, [`buyPrice${s}`, `quantity${s}`],
-                `${from?.shortName ?? '다른 계산기'} 평단 ${price(payload.buyPrice, tab)} × ${won(payload.quantity)}주를 넣었어요`);
-            // 이전 매도가가 있으면 남겨두되 전체 선택 → 바로 숫자를 치면 새 값으로 바뀌어요
-            const sell = view.querySelector(`input[name="sellPrice${s}"]`);
-            sell.focus({ preventScroll: true });
-            sell.select();
+            const who = from?.shortName ?? '다른 계산기';
+            // 종목 정보에서 현재가만 온 경우: 매도가에 넣고, 커서는 매수가 칸으로 (내 매수가를 넣게)
+            const sellOnly = payload.sellPrice != null && payload.buyPrice == null;
+            if (sellOnly) {
+                showReceived(view, [`sellPrice${s}`], `${who}에서 현재가 ${price(payload.sellPrice, tab)}을 매도가로 넣었어요`);
+            } else {
+                showReceived(view, [`buyPrice${s}`, `quantity${s}`],
+                    `${who} 평단 ${price(payload.buyPrice, tab)} × ${won(payload.quantity)}주를 넣었어요`);
+            }
+            // 다음에 칠 칸을 전체 선택 → 바로 숫자를 치면 새 값으로 바뀌어요
+            const next = view.querySelector(`input[name="${sellOnly ? 'buyPrice' : 'sellPrice'}${s}"]`);
+            next.focus({ preventScroll: true });
+            next.select();
         }
     },
 };

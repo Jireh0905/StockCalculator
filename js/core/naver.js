@@ -66,6 +66,13 @@ function datasOf(json, area) {
 const isDown = (rf) => rf === '4' || rf === '5';
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
+/** 종목 거래 시간대 (네이버 tradingSessionType → 화면 글자) */
+const SESSIONS = {
+    PRE_MARKET: '프리마켓',
+    REGULAR_MARKET: '정규장',
+    AFTER_MARKET: '애프터마켓',
+};
+
 /** 지수 이름 (네이버 코드 → 화면 이름) */
 export const INDEX_NAMES = {
     KOSPI: '코스피',
@@ -125,6 +132,8 @@ export async function loadItems(codes) {
             shares: num(d.countOfListedStock),
             nav: num(d.nav),                                   // ETF 순자산가치
             open: d.ms === 'OPEN',
+            // 거래 시간대: 정규장(9:00~15:30) 밖에도 대체거래소(NXT) 프리마켓·애프터마켓에서 가격이 움직여요
+            session: SESSIONS[d.nxtOverMarketPriceInfo?.tradingSessionType] ?? null,
         };
     });
     return { time: json.result.time ?? Date.now(), items };

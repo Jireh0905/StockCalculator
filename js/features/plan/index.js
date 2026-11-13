@@ -39,10 +39,12 @@ export default {
      * @param {{ avgPrice: number, holdQty: number, curPrice: number }} payload - 손익 계산기의 매수가·수량·매도가
      */
     receive(inputs, { avgPrice, holdQty, curPrice }) {
-        return {
-            ...inputs,
-            values: { ...inputs?.values, avgPrice: inputText(avgPrice), holdQty: won(holdQty), curPrice: inputText(curPrice) },
-        };
+        // 넘겨받은 칸만 바꿔요 (종목 정보는 현재가만 넘겨요)
+        const values = { ...inputs?.values };
+        if (avgPrice != null) values.avgPrice = inputText(avgPrice);
+        if (holdQty != null) values.holdQty = won(holdQty);
+        if (curPrice != null) values.curPrice = inputText(curPrice);
+        return { ...inputs, values };
     },
 
     mount(view, ctx) {
@@ -228,8 +230,13 @@ export default {
         // 다른 기능에서 평단·수량·현재가를 받아 들어왔으면: 강조 + 알림
         if (ctx.received) {
             const { from, payload } = ctx.received;
-            showReceived(view, ['avgPrice', 'holdQty', 'curPrice'],
-                `${from?.shortName ?? '다른 계산기'}에서 평단·수량·현재가를 넣었어요 (${price(payload.avgPrice, market)} × ${won(payload.holdQty)}주 → ${price(payload.curPrice, market)})`);
+            const who = from?.shortName ?? '다른 계산기';
+            if (payload.avgPrice == null) {
+                showReceived(view, ['curPrice'], `${who}에서 현재가 ${price(payload.curPrice, market)}을 넣었어요`);
+            } else {
+                showReceived(view, ['avgPrice', 'holdQty', 'curPrice'],
+                    `${who}에서 평단·수량·현재가를 넣었어요 (${price(payload.avgPrice, market)} × ${won(payload.holdQty)}주 → ${price(payload.curPrice, market)})`);
+            }
         }
     },
 };

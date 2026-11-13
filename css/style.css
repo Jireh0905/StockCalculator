@@ -321,7 +321,9 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
 .c7 { background: #e3fafc; color: #0c8599; }
 .c8 { background: #fff0f6; color: #d6336c; }
 .c9 { background: #fff9db; color: #e67700; }
+.c10 { background: #edf0ff; color: #3b5bdb; }
 @media (prefers-color-scheme: dark) {
+    .c10 { background: #1f2547; color: #91a7ff; }
     .c8 { background: #3a1a28; color: #f06595; }
     .c9 { background: #3a3014; color: #fcc419; }
     .c3 { background: #3a2a14; }
@@ -1393,6 +1395,107 @@ body.sheet-open .sheet { transform: translate(-50%, 0); visibility: visible; }
         align-items: start;
     }
     .mk-col { display: block; min-width: 0; }
+}
+
+/* ---------- 종목 검색 (core/stock-search.js) ---------- */
+.ss { position: relative; }
+.ss-input { display: block; }
+.ss-input input { padding-left: 40px; }
+.ss-input input::-webkit-search-cancel-button { cursor: pointer; }
+.ss-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+/* 결과 목록: 검색창 바로 아래에 겹쳐서 (아래 카드를 밀어내지 않게) */
+.ss-list {
+    position: absolute;
+    z-index: 15;
+    left: 0;
+    right: 0;
+    top: calc(100% - 22px);
+    max-height: min(360px, 60vh);
+    margin: 0;
+    padding: 4px;
+    overflow-y: auto;
+    list-style: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+}
+.ss-list:empty { display: none; }
+.ss-title { padding: 6px 10px 4px; font-size: 0.75rem; font-weight: 700; color: var(--text-3); }
+.ss-item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.ss-item:hover, .ss-item[aria-selected="true"] { background: var(--primary-weak); }
+.ss-name { min-width: 0; font-size: 0.9375rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-name b { color: var(--primary); font-weight: 700; }
+.ss-meta { flex-shrink: 0; font-size: 0.75rem; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.ss-empty { padding: 12px 10px; font-size: 0.875rem; color: var(--text-3); }
+.ss-empty.is-error { color: var(--up); }
+.ss-foot { margin: 6px 2px 0; font-size: 0.6875rem; color: var(--text-3); }
+
+/* ---------- 종목 정보 (features/stock) ---------- */
+.st-page { max-width: 480px; margin: 0 auto; }
+.st-search { position: relative; z-index: 5; padding: 14px 14px 10px; }
+.st-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.st-title h2 { margin: 0; font-size: 1.125rem; font-weight: 800; letter-spacing: -0.01em; }
+.st-code { font-size: 0.8125rem; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.st-badge {
+    padding: 1px 7px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--text-3);
+}
+.st-badge.is-live { background: var(--up-weak); color: var(--up); }
+.st-time { margin: 8px 0 0; font-size: 0.75rem; color: var(--text-3); }
+.st-rows { margin-top: 12px; }
+.st-rows li { padding: 6px 0; font-size: 0.875rem; }
+/* 52주 범위 막대 */
+.st-range { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.st-range-head { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-3); }
+.st-range-head b { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.st-range-bar {
+    position: relative;
+    height: 6px;
+    margin: 8px 0 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--down), var(--up));
+    opacity: .85;
+}
+.st-range-bar i {
+    position: absolute;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    border: 3px solid var(--surface);
+    border-radius: 50%;
+    background: var(--text);
+    transform: translate(-50%, -50%);
+    box-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+.st-range-note { margin: 0; font-size: 0.75rem; color: var(--text-3); text-align: center; }
+/* 차트 그림: 흰 바탕 그림이라 다크 모드에서도 흰 상자에 담아요 */
+.st-chart-tabs { grid-template-columns: repeat(7, 1fr); margin-bottom: 10px; }
+.st-chart-tabs button { padding: 0; font-size: 0.8125rem; }
+.st-chart { overflow: hidden; border-radius: var(--radius-sm); background: #fff; }
+.st-chart img { display: block; width: 100%; height: auto; }
+.st-chart .mk-msg { justify-content: center; min-height: 120px; background: var(--surface-2); color: var(--text-3); }
+.st-page .link-row { grid-template-columns: 1fr 1fr; }
+.st-page .mk-msg small { display: block; color: var(--text-3); }
+
+/* 넓을 때: 왼쪽(가격·가치) + 오른쪽(차트·계산기로) */
+@container (min-width: 760px) {
+    .st-page { max-width: 920px; }
+    .st-search { max-width: calc(50% - 10px); }
+    .st-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; align-items: start; }
+    .st-col { min-width: 0; }
 }
 
 /* ---------- 키보드로 이동할 때만 포커스 테두리 표시 ---------- */

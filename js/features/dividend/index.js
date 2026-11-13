@@ -39,12 +39,18 @@ export default {
      * @param {object | null} inputs - 지금 시장의 저장된 입력값
      * @param {{ buyPrice: number, quantity: number }} payload - 평단(소수 둘째 자리까지)과 보유 수량
      */
-    receive(inputs, { buyPrice, quantity }) {
-        return {
-            ...inputs,
-            tab: 'mine',
-            values: { ...inputs?.values, avgPrice: inputText(buyPrice), qty: won(quantity) },
-        };
+    receive(inputs, { buyPrice, quantity, price: stockPrice, annualDps }, market) {
+        const values = { ...inputs?.values };
+        if (buyPrice != null) values.avgPrice = inputText(buyPrice);
+        if (quantity != null) values.qty = won(quantity);
+        // 종목 정보 → 주가와 1년 주당 배당금. 배당 주기는 지금 고른 값을 지키고 1회 금액 = 1년 ÷ 주기
+        if (stockPrice != null) values.price = inputText(stockPrice);
+        if (annualDps != null) {
+            const freq = values.freq || DEFAULT_FREQ[market] || '1';
+            values.freq = freq;
+            values.dps = inputText(annualDps / Number(freq));
+        }
+        return { ...inputs, tab: 'mine', values };
     },
 
     mount(view, ctx) {
@@ -173,8 +179,15 @@ export default {
         // 다른 기능에서 평단·수량을 받아 들어왔으면: 강조 + 알림
         if (ctx.received) {
             const { from, payload } = ctx.received;
-            showReceived(view, ['qty', 'avgPrice'],
-                `${from?.shortName ?? '다른 계산기'} 평단 ${price(payload.buyPrice, market)} × ${won(payload.quantity)}주를 넣었어요`);
+            const who = from?.shortName ?? '다른 계산기';
+            if (payload.annualDps != null) {
+                const freq = freqOf(Number(view.querySelector('input[name="freq"]').value));
+                showReceived(view, ['price', 'dps'], `${who}에서 주가 ${price(payload.price, market)}, 1년 배당 ${price(payload.annualDps, market)}을 `
+                    + `${freq.label}${freq.n > 1 ? `(1회 ${price(payload.annualDps / freq.n, market)})` : ''}로 넣었어요. 주기가 다르면 바꿔 주세요`);
+            } else {
+                showReceived(view, ['qty', 'avgPrice'],
+                    `${who} 평단 ${price(payload.buyPrice, market)} × ${won(payload.quantity)}주를 넣었어요`);
+            }
         }
     },
 };

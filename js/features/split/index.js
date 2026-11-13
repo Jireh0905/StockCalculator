@@ -82,8 +82,13 @@ export default {
      *           sells?: Array<{ price: number, qty: number }>, fxBuy?: number, fxSell?: number }} payload
      * @returns 새 입력값 (ctx.inputs와 같은 모양)
      */
-    receive(inputs, { avgPrice, holdQty, buys, sells, fxBuy, fxSell }) {
+    receive(inputs, { avgPrice, holdQty, buys, sells, fxBuy, fxSell, addBuyPrice }) {
         const saved = normalize(inputs);
+        // 종목 정보 → 현재가를 1차 추가 매수가로 (보유 주식·수량·다른 줄은 그대로)
+        if (addBuyPrice != null) {
+            const [first, ...rest] = saved.buys;
+            return { ...saved, tab: 'buy', buys: [{ ...first, buyPrice: inputText(addBuyPrice) }, ...rest] };
+        }
         const values = { ...saved.values, avgPrice: inputText(avgPrice), holdQty: won(holdQty) };
         if (sells) {
             if (fxBuy > 0) values.fxBuy = inputText(fxBuy);
@@ -280,7 +285,13 @@ export default {
         if (ctx.received) {
             const { from, payload } = ctx.received;
             const who = from?.shortName ?? '다른 계산기';
-            if (payload.sells) {
+            if (payload.addBuyPrice != null) {
+                showReceived(view, ['buyPrice'], `${who}에서 현재가 ${price(payload.addBuyPrice, market)}을 1차 추가 매수가로 넣었어요`);
+                // 첫 줄의 수량 칸으로 커서 (몇 주 살지 넣게)
+                const qty = view.querySelector('.buy-row input[name="buyQty"]');
+                qty?.focus({ preventScroll: true });
+                qty?.select();
+            } else if (payload.sells) {
                 showReceived(view, ['avgPrice', 'holdQty', 'sellPrice', 'sellQty', 'fxBuy', 'fxSell'],
                     `${who}에서 평단 ${price(payload.avgPrice, market)} × ${won(payload.holdQty)}주와 매도가를 넣었어요. 수량을 나눠 보세요`);
                 // 바로 나눠 볼 수 있게 1차 매도 수량 칸으로 커서를 옮기고 전체 선택

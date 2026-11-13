@@ -105,6 +105,21 @@ export function setInputCurrency(key, currency) {
     persist();
 }
 
+/* ---------- 최근 본 종목 (종목 검색) ---------- */
+
+const RECENT_MAX = 5;
+
+/** 최근 고른 종목 (새것이 앞) [{ code, name, market }] */
+export function getRecentStocks() {
+    return Array.isArray(state.recentStocks) ? state.recentStocks : [];
+}
+
+/** 고른 종목을 맨 앞에 (같은 종목은 한 번만, 최대 5개) */
+export function addRecentStock(stock) {
+    state.recentStocks = [stock, ...getRecentStocks().filter(s => s.code !== stock.code)].slice(0, RECENT_MAX);
+    persist();
+}
+
 /* ---------- 입력값 ---------- */
 
 /** 기능의 마지막 입력값 (없으면 null) */

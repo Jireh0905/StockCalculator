@@ -29,6 +29,7 @@ import dividend from './features/dividend/index.js';
 import saving from './features/saving/index.js';
 import recover from './features/recover/index.js';
 import fx from './features/fx/index.js';
+import stock from './features/stock/index.js';
 
 export const FEATURES = [
     profit,
@@ -39,5 +40,6 @@ export const FEATURES = [
     saving,
     recover,
     fx,     // 시장 지표: 계산기가 아니라 '정보' 묶음 (records: false → 기록 버튼 없음)
+    stock,  // 종목 정보: 국내 종목 검색 → 시세·가치·차트 → 계산기로
     // 아직 만들지 않은 기능은 mount 없이 soon: true로 넣으면 메뉴에 "준비 중"으로 보여요
 ];
