@@ -33,15 +33,24 @@ export default {
     fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
-     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (국내만, core/stock-bar.js가 불러요)
+     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (core/stock-bar.js가 불러요. 국내는 원화, 해외는 달러)
      * 현재가 → 주가, 1년 주당 배당금 ÷ 지금 고른 배당 주기 → 주당 배당금(1회). 배당 정보가 없으면 주가만.
      */
-    stockFill({ view, data }) {
-        const fields = [{ input: view.querySelector('input[name="price"]'), value: inputText(data.price), label: `주가 ${won(data.price)}원` }];
+    stockFill({ view, data, market }) {
+        const fields = [{ input: view.querySelector('input[name="price"]'), value: inputText(data.price), label: `주가 ${price(data.price, market)}` }];
         if (!(data.dps > 0)) return { fields, note: '배당 정보가 없어서 주당 배당금은 그대로 둬요' };
+        // 지급 주기를 알면(해외 트레이딩뷰: 매월·분기…) 주기 버튼을 그걸로 바꿔요. 버튼을 누른 것과 같아서 계산기가 알아서 다시 계산
+        if (data.divFreq) view.querySelector(`[data-choice="freq"] [data-value="${data.divFreq}"]`)?.click();
         const freq = freqOf(Number(view.querySelector('input[name="freq"]').value) || 1);
-        fields.push({ input: view.querySelector('input[name="dps"]'), value: inputText(data.dps / freq.n), label: `${freq.label} 배당 ${won(data.dps / freq.n)}원` });
-        return { fields, note: freq.n > 1 ? `1년 ${won(data.dps)}원 ÷ ${freq.n}` : null };
+        // 1회 금액: 주기를 알고 최근 1회 분배금이 있으면 그 값, 아니면 1년 ÷ 주기
+        const raw = data.divFreq && data.divRecent > 0 ? data.divRecent : data.dps / freq.n;
+        const once = isGlobal(market) ? raw : Math.round(raw);   // 원화는 원 단위로
+        fields.push({ input: view.querySelector('input[name="dps"]'), value: inputText(once), label: `${freq.label} 배당 ${price(once, market)}` });
+        const notes = [];
+        if (data.dpsEstimated) notes.push(`1년 약 ${price(data.dps, market)}, 최근 12개월 분배율 ${data.divYield.toFixed(2)}% 기준`);
+        else if (freq.n > 1 && !data.divFreq) notes.push(`1년 ${price(data.dps, market)} ÷ ${freq.n}`);
+        if (!data.divFreq) notes.push('주기가 다르면 바꿔 주세요');
+        return { fields, note: notes.join(' · ') || null };
     },
 
     /**
@@ -51,16 +60,19 @@ export default {
      * @param {object | null} inputs - 지금 시장의 저장된 입력값
      * @param {{ buyPrice: number, quantity: number }} payload - 평단(소수 둘째 자리까지)과 보유 수량
      */
-    receive(inputs, { buyPrice, quantity, price: stockPrice, annualDps }, market) {
+    receive(inputs, { buyPrice, quantity, price: stockPrice, annualDps, recentDps, freq: knownFreq }, market) {
         const values = { ...inputs?.values };
         if (buyPrice != null) values.avgPrice = inputText(buyPrice);
         if (quantity != null) values.qty = won(quantity);
-        // 종목 정보 → 주가와 1년 주당 배당금. 배당 주기는 지금 고른 값을 지키고 1회 금액 = 1년 ÷ 주기
+        // 종목 정보 → 주가와 1년 주당 배당금.
+        //   지급 주기를 알면(해외 트레이딩뷰) 그 주기로 바꾸고 1회 = 최근 1회 분배금,
+        //   모르면 지금 고른 주기를 지키고 1회 = 1년 ÷ 주기
         if (stockPrice != null) values.price = inputText(stockPrice);
         if (annualDps != null) {
-            const freq = values.freq || DEFAULT_FREQ[market] || '1';
+            const freq = knownFreq ? String(knownFreq) : (values.freq || DEFAULT_FREQ[market] || '1');
             values.freq = freq;
-            values.dps = inputText(annualDps / Number(freq));
+            const once = knownFreq && recentDps > 0 ? recentDps : annualDps / Number(freq);
+            values.dps = inputText(isGlobal(market) ? once : Math.round(once));   // 원화는 원 단위로
         }
         return { ...inputs, tab: 'mine', values };
     },
@@ -194,8 +206,11 @@ export default {
             const who = from?.shortName ?? '다른 계산기';
             if (payload.annualDps != null) {
                 const freq = freqOf(Number(view.querySelector('input[name="freq"]').value));
-                showReceived(view, ['price', 'dps'], `${who}에서 주가 ${price(payload.price, market)}, 1년 배당 ${price(payload.annualDps, market)}을 `
-                    + `${freq.label}${freq.n > 1 ? `(1회 ${price(payload.annualDps / freq.n, market)})` : ''}로 넣었어요. 주기가 다르면 바꿔 주세요`);
+                const once = view.querySelector('input[name="dps"]').value;
+                const about = payload.estimated ? '약 ' : '';
+                showReceived(view, ['price', 'dps'], `${who}에서 주가 ${price(payload.price, market)}, 1년 배당 ${about}${price(payload.annualDps, market)}을 `
+                    + `${freq.label}${freq.n > 1 ? `(1회 ${market === 'global' ? `$${once}` : `${once}원`})` : ''}로 넣었어요.`
+                    + (payload.freq ? '' : ' 주기가 다르면 바꿔 주세요'));
             } else {
                 showReceived(view, ['qty', 'avgPrice'],
                     `${who} 평단 ${price(payload.buyPrice, market)} × ${won(payload.quantity)}주를 넣었어요`);

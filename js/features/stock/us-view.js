@@ -67,6 +67,22 @@ export function usPriceCard(stock, q) {
 /** PER·PBR: 값이 없으면 "—", 마이너스면 "적자" */
 const multiple = (v, negative = '적자') => (v == null ? '—' : v <= 0 ? negative : `${fixed(v)}배`);
 
+/** 지급 주기 글자 */
+const FREQ_LABEL = { 12: '매달', 4: '분기마다', 2: '반년마다', 1: '1년마다' };
+
+/** 1년 배당 글자: 추정값이면 "약 $1.05" + 아래에 근거 */
+function usDpsText(d) {
+    if (d.dps == null) return '—';
+    if (!d.dpsEstimated) return usd(d.dps);
+    return `약 ${usd(d.dps)}<small class="st-sub">최근 12개월 배당 수익률 ${fixed(d.divYield)}% 기준</small>`;
+}
+
+/** 최근 1회 분배금 + 지급 주기: "$0.27 · 분기" */
+function recentText(d) {
+    if (d.divRecent == null) return '—';
+    return `${usd(d.divRecent)}${d.divFreq ? ` <small class="st-sub">${FREQ_LABEL[d.divFreq]}</small>` : ''}`;
+}
+
 export function usValueCard(stock, d) {
     if (d.isEtf) {
         const gap = d.nav ? (d.price / d.nav - 1) * 100 : null;
@@ -78,9 +94,12 @@ export function usValueCard(stock, d) {
                     ${row('괴리율', gap != null ? `${sign(gap)}${fixed(Math.abs(gap))}%` : '—')}
                     ${row('운용 자산', d.aum != null ? bigUsd(d.aum) : '—')}
                     ${row('총보수 (1년)', d.expense != null ? `${fixed(d.expense)}%` : '—')}
-                    ${row('배당 수익률', d.yieldPct != null ? `${fixed(d.yieldPct)}%` : '—')}
+                    <li class="divider"><span>분배금 (1년)</span><span>${usDpsText(d)}</span></li>
+                    ${row('최근 1회 분배금', recentText(d))}
+                    ${row('배당 수익률', d.divYield != null ? `${fixed(d.divYield)}%` : '—')}
                 </ul>
-                <p class="mk-note">ETF는 PER·PBR 대신, 가격이 담고 있는 자산 가치(NAV)보다 비싼지(+) 싼지(−)와 보수를 봐요.</p>
+                <p class="mk-note">ETF는 PER·PBR 대신, 가격이 담고 있는 자산 가치(NAV)보다 비싼지(+) 싼지(−)와 보수를 봐요.
+                    1년 분배금은 현재가 × 최근 12개월 배당 수익률로 추정한 값이에요.</p>
             </section>`;
     }
     return `
@@ -90,8 +109,9 @@ export function usValueCard(stock, d) {
                 ${row('PER', multiple(d.per))}
                 ${row('PBR', multiple(d.pbr, '—'))}
                 <li class="divider"><span>EPS (주당순이익)</span><span>${d.eps != null ? usd(d.eps) : '—'}</span></li>
-                <li class="divider"><span>주당 배당금 (1년)</span><span>${d.dps != null ? usd(d.dps) : '—'}</span></li>
-                ${row('배당 수익률', d.yieldPct != null ? `${fixed(d.yieldPct)}%` : '—')}
+                <li class="divider"><span>주당 배당금 (1년)</span><span>${usDpsText(d)}</span></li>
+                ${row('최근 1회 배당', recentText(d))}
+                ${row('배당 수익률', d.divYield != null ? `${fixed(d.divYield)}%` : '—')}
             </ul>
             <p class="mk-note">트레이딩뷰 기준이에요. PER·EPS는 최근 12개월(TTM) 순이익, 주당 배당금은 최근 회계연도 합계예요.
                 미국 배당은 대부분 분기마다 나눠 줘요.</p>

@@ -147,11 +147,11 @@ export default {
     fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
-     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (국내만, core/stock-bar.js가 불러요)
+     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (core/stock-bar.js가 불러요. 국내는 원화, 해외는 달러)
      * 현재가 → 매수가 ("지금 사면 목표가는?").
      */
-    stockFill({ view, data }) {
-        return { fields: [{ input: view.querySelector('input[name="buyPrice"]'), value: inputText(data.price), label: `매수가 ${won(data.price)}원` }] };
+    stockFill({ view, data, market }) {
+        return { fields: [{ input: view.querySelector('input[name="buyPrice"]'), value: inputText(data.price), label: `매수가 ${price(data.price, market)}` }] };
     },
 
     /**

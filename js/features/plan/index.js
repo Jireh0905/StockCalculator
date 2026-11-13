@@ -32,11 +32,11 @@ export default {
     fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
-     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (국내만, core/stock-bar.js가 불러요)
+     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (core/stock-bar.js가 불러요. 국내는 원화, 해외는 달러)
      * 현재가 → 현재가 칸 (평단·보유 수량은 내 값이라 그대로).
      */
-    stockFill({ view, data }) {
-        return { fields: [{ input: view.querySelector('input[name="curPrice"]'), value: inputText(data.price), label: `현재가 ${won(data.price)}원` }] };
+    stockFill({ view, data, market }) {
+        return { fields: [{ input: view.querySelector('input[name="curPrice"]'), value: inputText(data.price), label: `현재가 ${price(data.price, market)}` }] };
     },
 
     /**

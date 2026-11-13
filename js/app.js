@@ -22,7 +22,7 @@ import * as session from './core/session.js';
 import { showToast } from './core/toast.js';
 import { renderMarketBar, MARKETS, isGlobal, useRate } from './core/market.js';
 import { setupMoneyInputs } from './core/money-input.js';
-import { renderStockBar, renderStockBarNote } from './core/stock-bar.js';
+import { renderStockBar } from './core/stock-bar.js';
 import { watchNetwork, isOnline, onNetworkChange, checkNow } from './core/network.js';
 
 const APP_NAME = 'Jireh';
@@ -103,11 +103,10 @@ function render({ keepScroll = false } = {}) {
         }
         useRate(null); // 원화 환산 환율은 기준 환율에서 시작 (기능이 자기 환율을 정하면 바꿔요)
         current.mount(root, createContext(current, received));
-        // 종목 검색 줄 (국내/해외 줄 아래): 고르면 계산기의 stockFill이 정한 칸을 채워요. 해외는 안내 한 줄
+        // 종목 검색 줄 (국내/해외 줄 아래): 고르면 계산기의 stockFill이 정한 칸을 채워요 (국내 원화, 해외 달러)
         if (stockBar) {
             const viewRoot = root;
-            if (isGlobal(session.getMarket())) renderStockBarNote(stockBar);
-            else renderStockBar(stockBar, { featureId: current.id, getView: () => viewRoot, fill: current.stockFill });
+            renderStockBar(stockBar, { featureId: current.id, market: session.getMarket(), getView: () => viewRoot, fill: current.stockFill });
         }
         // 해외 달러 칸에 $/₩ 버튼 (원화로 넣으면 기준 환율로 나눠 달러로 넣어요)
         if (current.fx && isGlobal(session.getMarket())) setupMoneyInputs(root, current.id);

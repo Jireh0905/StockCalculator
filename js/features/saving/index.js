@@ -33,15 +33,16 @@ export default {
     fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
-     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (국내만, core/stock-bar.js가 불러요)
+     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (core/stock-bar.js가 불러요. 국내는 원화, 해외는 달러)
      * 1년 주당 배당금 ÷ 현재가 → 배당 수익률 (주가 상승률은 예상이라 그대로).
      */
-    stockFill({ view, data }) {
+    stockFill({ view, data, market }) {
         if (!(data.dps > 0)) return { fields: [], note: '배당 정보가 없는 종목이에요' };
-        const pct = (data.dps / data.price * 100).toFixed(2);
+        // ETF처럼 1년 배당을 수익률로 추정한 종목은 수익률을 그대로, 아니면 1년 배당 ÷ 현재가
+        const pct = (data.dpsEstimated ? data.divYield : data.dps / data.price * 100).toFixed(2);
         return {
             fields: [{ input: view.querySelector('input[name="divYield"]'), value: pct, label: `배당 수익률 ${pct}%` }],
-            note: `1년 배당 ${won(data.dps)}원 ÷ ${won(data.price)}원`,
+            note: data.dpsEstimated ? '최근 12개월 분배율' : `1년 배당 ${money(data.dps, market)} ÷ ${money(data.price, market)}`,
         };
     },
 

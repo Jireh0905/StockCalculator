@@ -72,15 +72,15 @@ export default {
     fx: true,        // 해외: 달러 칸 $/₩ 넣기 + 결과 [$ | 원] 보기 (app.js·core/money-input.js)
 
     /**
-     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (국내만, core/stock-bar.js가 불러요)
+     * 계산기 위 종목 검색 줄에서 종목을 골랐을 때 채울 칸 (core/stock-bar.js가 불러요. 국내는 원화, 해외는 달러)
      * 분할 매수 탭이면 현재가 → 1차 추가 매수가, 분할 매도 탭이면 → 1차 매도가. 커서는 그 줄의 수량 칸으로.
      */
-    stockFill({ view, data }) {
+    stockFill({ view, data, market }) {
         const selling = !!view.querySelector('[data-tab="sell"][aria-selected="true"]');
         const input = view.querySelector(`input[name="${selling ? 'sellPrice' : 'buyPrice'}"]`);
         const qty = input?.closest('.buy-row, .sell-row')?.querySelector(`input[name="${selling ? 'sellQty' : 'buyQty'}"]`);
         return {
-            fields: [{ input, value: inputText(data.price), label: `1차 ${selling ? '매도가' : '추가 매수가'} ${won(data.price)}원` }],
+            fields: [{ input, value: inputText(data.price), label: `1차 ${selling ? '매도가' : '추가 매수가'} ${price(data.price, market)}` }],
             focus: qty && !qty.value ? qty : null,
         };
     },

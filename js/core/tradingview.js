@@ -65,6 +65,8 @@ const US_COLUMNS = [
     'price_52_week_high', 'price_52_week_low',
     'price_earnings_ttm', 'price_book_fq', 'earnings_per_share_basic_ttm',
     'dps_common_stock_prim_issue_fy', 'dividends_yield_current', 'market_cap_basic',
+    // ETF는 위 배당 칸이 비어 있어서 이 칸들을 써요 (최근 12개월 배당 수익률, 최근 1회 분배금, 지급 주기)
+    'dividends_yield', 'dividend_amount_recent', 'dividends_frequency',
     'premarket_close', 'premarket_change', 'postmarket_close', 'postmarket_change',
     'nav', 'aum', 'expense_ratio', 'type', 'update_mode', 'description',
 ];
@@ -82,6 +84,11 @@ export async function loadUsQuote(stock) {
     if (price == null) throw new Error('시세가 없어요');
     const change = num(r.change_abs) ?? 0;
     const extra = (close, pct) => (num(close) != null ? { price: close, rate: num(pct) ?? 0 } : null);
+    // 배당: 주식은 1년 주당 배당금 칸이 있고, ETF는 없어서 "현재가 × 최근 12개월 배당 수익률"로 추정해요
+    const divYield = num(r.dividends_yield_current) ?? num(r.dividends_yield);
+    let dps = num(r.dps_common_stock_prim_issue_fy);
+    const dpsEstimated = dps == null && divYield > 0;
+    if (dpsEstimated) dps = price * divYield / 100;
     return {
         code: stock.code,
         name: r.description,
@@ -92,8 +99,11 @@ export async function loadUsQuote(stock) {
         dayOpen: num(r.open), high: num(r.high), low: num(r.low), volume: num(r.volume),
         high52: num(r.price_52_week_high), low52: num(r.price_52_week_low),
         per: num(r.price_earnings_ttm), pbr: num(r.price_book_fq), eps: num(r.earnings_per_share_basic_ttm),
-        dps: num(r.dps_common_stock_prim_issue_fy),           // 1년 주당 배당금 (최근 회계연도, 달러)
-        yieldPct: num(r.dividends_yield_current),             // 배당 수익률 (%)
+        dps,                                                  // 1년 주당 배당금 (달러, 주식은 최근 회계연도 / ETF는 추정)
+        dpsEstimated,                                         // true면 현재가 × 최근 12개월 수익률로 추정한 값
+        divYield,                                             // 배당 수익률 (%, 최근 12개월)
+        divRecent: num(r.dividend_amount_recent),             // 최근 1회 분배금 (달러)
+        divFreq: FREQ_N[r.dividends_frequency] ?? null,       // 1년에 몇 번 (12·4·2·1, 모르면 null)
         cap: num(r.market_cap_basic),
         pre: extra(r.premarket_close, r.premarket_change),    // 프리마켓 (정규장 전)
         post: extra(r.postmarket_close, r.postmarket_change), // 애프터마켓 (정규장 뒤)
@@ -102,6 +112,35 @@ export async function loadUsQuote(stock) {
         delay: delayText(r.update_mode),
         time: Date.now(),
     };
+}
+
+/** 트레이딩뷰 지급 주기 → 1년에 몇 번 */
+const FREQ_N = { Monthly: 12, Quarterly: 4, 'Semi-Annual': 2, 'Semi-annual': 2, Annual: 1, Annually: 1 };
+
+/**
+ * 국내 종목 배당 보충: 네이버에 주당 배당금이 없을 때(ETF 등) 트레이딩뷰 분배율로 1년 분배금을 추정해요.
+ *   1년 분배금 ≈ 현재가 × 최근 12개월 분배율
+ * 트레이딩뷰의 국내 1회 분배금·지급 주기는 단위가 이상하거나 "기타"로 와서 쓰지 않아요.
+ * 실패해도 시세는 그대로 보여줘야 해서 오류를 던지지 않아요.
+ * @param {{ code: string, price: number, dps: number | null }} data - naver.js loadItems의 종목 한 개 (바꿔서 돌려줘요)
+ */
+export async function addKrDividend(data) {
+    if (data.dps > 0) {
+        data.divYield ??= data.dps / data.price * 100;
+        return data;
+    }
+    try {
+        const rows = await scan([`KRX:${data.code}`], ['dividends_yield']);
+        const y = num(rows.get(`KRX:${data.code}`)?.dividends_yield);
+        if (y > 0) {
+            data.divYield = y;
+            data.dps = Math.round(data.price * y / 100);
+            data.dpsEstimated = true;
+        }
+    } catch {
+        // 배당은 덤이라 못 받아도 넘어가요
+    }
+    return data;
 }
 
 /**

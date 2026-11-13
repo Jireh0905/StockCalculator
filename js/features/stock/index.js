@@ -14,7 +14,7 @@
  */
 import { createStockSearch, MARKET_NAMES, escapeHtml } from '../../core/stock-search.js';
 import { loadItems } from '../../core/naver.js';
-import { loadUsQuote } from '../../core/tradingview.js';
+import { loadUsQuote, addKrDividend } from '../../core/tradingview.js';
 import { isOnline, onNetworkChange } from '../../core/network.js';
 import { won, clockTime } from '../../core/format.js';
 import { fixed, sign, tone, arrow, row, titleHtml, rangeHtml, linksCard } from './parts.js';
@@ -109,21 +109,31 @@ function priceCard(stock, q) {
         </section>`;
 }
 
+/** 1년 배당금 글자: 추정값이면 "약 3,154원" + 아래에 근거 */
+function krDpsText(d) {
+    if (d.dps == null) return '—';
+    if (!d.dpsEstimated) return `${won(d.dps)}원`;
+    return `약 ${won(d.dps)}원<small class="st-sub">최근 12개월 분배율 ${fixed(d.divYield)}% 기준 · 트레이딩뷰</small>`;
+}
+
 function valueCard(stock, d) {
-    // ETF: PER·PBR 대신 NAV(순자산가치)와 괴리율
+    // ETF: PER·PBR 대신 NAV(순자산가치)와 괴리율, 분배금
     if (stock.market === 'E' || d.nav != null) {
         const gap = d.nav ? (d.price / d.nav - 1) * 100 : null;
         return `
             <section class="card">
-                <h2 class="card-title">ETF 가치</h2>
+                <h2 class="card-title">ETF 가치 · 분배금</h2>
                 <ul class="rows rows-tight st-rows">
                     ${row('NAV (순자산가치)', d.nav != null ? `${fixed(d.nav)}원` : '—')}
                     ${row('괴리율', gap != null ? `${sign(gap)}${fixed(Math.abs(gap))}%` : '—')}
+                    <li class="divider"><span>분배금 (1년)</span><span>${krDpsText(d)}</span></li>
+                    ${row('분배율', d.divYield != null ? `${fixed(d.divYield)}%` : '—')}
                 </ul>
-                <p class="mk-note">ETF는 PER·PBR 대신, 가격이 담고 있는 자산 가치(NAV)보다 비싼지(+) 싼지(−)를 봐요.</p>
+                <p class="mk-note">ETF는 PER·PBR 대신, 가격이 담고 있는 자산 가치(NAV)보다 비싼지(+) 싼지(−)를 봐요.
+                    분배금은 현재가 × 최근 12개월 분배율로 추정한 값이라, 매달 분배금이 바뀌는 상품은 앞으로 받을 금액과 다를 수 있어요.</p>
             </section>`;
     }
-    const yieldPct = d.dps != null && d.price ? d.dps / d.price * 100 : null;
+    const yieldPct = d.divYield ?? (d.dps != null && d.price ? d.dps / d.price * 100 : null);
     return `
         <section class="card">
             <h2 class="card-title">가치 · 배당</h2>
@@ -133,7 +143,7 @@ function valueCard(stock, d) {
                 ${row('PBR', ratio(d.price, d.bps, '—'))}
                 <li class="divider"><span>EPS (주당순이익)</span><span>${d.eps != null ? `${won(d.eps)}원` : '—'}</span></li>
                 ${row('BPS (주당순자산)', d.bps != null ? `${won(d.bps)}원` : '—')}
-                <li class="divider"><span>주당 배당금 (1년)</span><span>${d.dps != null ? `${won(d.dps)}원` : '—'}</span></li>
+                <li class="divider"><span>주당 배당금 (1년)</span><span>${krDpsText(d)}</span></li>
                 ${row('배당 수익률', yieldPct != null ? `${fixed(yieldPct)}%` : '—')}
             </ul>
             <p class="mk-note">PER = 주가 ÷ EPS, PBR = 주가 ÷ BPS. EPS·BPS·주당 배당금은 최근 결산 기준이고,
@@ -260,6 +270,7 @@ export default {
                 } else {
                     const res = await loadItems([code]);
                     data = res.items.find(it => it.code === code);
+                    if (data) await addKrDividend(data);   // ETF처럼 네이버에 배당이 없으면 트레이딩뷰 분배율로
                     time = res.time;
                 }
                 if (!data) throw new Error('시세가 없어요 (거래 정지·상장 폐지일 수 있어요)');
@@ -300,7 +311,8 @@ export default {
                 target: { buyPrice: d.price },
                 split: { addBuyPrice: d.price },
                 plan: { curPrice: d.price },
-                dividend: { price: d.price, annualDps: d.dps },
+                // 해외는 지급 주기·최근 1회 분배금을 알면 같이 (배당 계산기가 주기를 그걸로 맞춰요)
+                dividend: { price: d.price, annualDps: d.dps, recentDps: d.divRecent ?? null, freq: d.divFreq ?? null, estimated: !!d.dpsEstimated },
             }[target];
             if (payload) ctx.sendTo(target, payload);
         }

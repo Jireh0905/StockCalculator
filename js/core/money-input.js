@@ -59,13 +59,22 @@ export function enhanceMoneyInputs(container, featureId) {
         hint.className = 'cur-hint';
         wrap.after(hint);
 
+        let fromProxy = false;   // 원화 칸에서 보낸 input 이벤트인지 (아래 real 리스너가 되받지 않게)
         proxy.addEventListener('input', () => {
             formatInput(proxy);
             const krw = parseNumber(proxy.value);
             real.value = krw > 0 ? inputText(krw / getFx()) : '';
             typed.set(slot(wrap), { usd: real.value, text: proxy.value, rate: getFx() });
             // 계산기는 진짜 칸에 달러를 친 것처럼 받아요 (bindNumberInputs가 듣는 이벤트)
+            fromProxy = true;
             real.dispatchEvent(new Event('input', { bubbles: true }));
+            fromProxy = false;
+        });
+        // 다른 곳(종목 검색 줄 등)이 진짜 칸에 달러를 넣으면, 원화 모드일 때 원화 칸도 맞춰요
+        real.addEventListener('input', () => {
+            if (fromProxy || !wrap.classList.contains('is-krw')) return;
+            const usd = parseNumber(real.value);
+            proxy.value = usd > 0 ? won(usd * getFx()) : '';
         });
 
         applyMode(wrap, getInputCurrency(key));

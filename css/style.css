@@ -1463,7 +1463,6 @@ body.sheet-open .sheet { transform: translate(-50%, 0); visibility: visible; }
 .sb-msg { margin: 4px 4px 0; font-size: 0.75rem; color: var(--text-3); }
 .sb-msg:empty { display: none; }
 .sb-msg.is-error { color: var(--up); }
-.sb-note { margin: 0; padding: 0 4px; font-size: 0.75rem; color: var(--text-3); }
 .stock-bar .ss-input input:disabled { opacity: .6; }
 @container (min-width: 760px) {
     .stock-bar { max-width: 920px; }
