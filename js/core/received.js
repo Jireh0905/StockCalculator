@@ -19,5 +19,6 @@ export function showReceived(view, names, message) {
             input.addEventListener('animationend', () => input.classList.remove('flash'), { once: true });
         });
     });
-    showToast(message);
+    // 달러 금액 뒤 조사: "$97.44을" → "$97.44를" ("97.44달러를"로 읽혀서)
+    showToast(message.replace(/(\$[\d,.]+)을/g, '$1를'));
 }

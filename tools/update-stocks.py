@@ -1,5 +1,5 @@
 """
-국내 종목 목록 만들기  (실행: py tools/update-stocks.py  →  data/stocks.json)
+종목 목록 만들기  (실행: py tools/update-stocks.py  →  data/stocks.json, data/us-stocks.json)
 
 종목 정보 화면의 검색은 이 파일(data/stocks.json)에서 찾아요.
 브라우저는 한국거래소·네이버 목록을 직접 못 받아서(CORS), 내 PC에서 이 스크립트로 받아 파일로 만들어 둬요.
@@ -13,6 +13,11 @@
 만드는 모양 (용량을 줄이려고 배열로)
   { "updated": "2026-11-13", "items": [["005930", "삼성전자", "K"], ...] }
   시장: K = 코스피, Q = 코스닥, E = ETF.  시가총액이 큰 순서로 적어요.
+
+미국 종목 (data/us-stocks.json)
+  - 네이버 해외주식 목록 (나스닥·NYSE·AMEX, 한글 이름)   api.stock.naver.com
+  - 트레이딩뷰 scanner (트레이딩뷰 거래소 이름 확인, 주요 ETF)  scanner.tradingview.com
+  { "updated": "...", "items": [["AAPL", "애플", "Apple Inc.", "NASDAQ", "S"], ...] }   S = 주식, E = ETF
 """
 import html
 import json
@@ -91,7 +96,16 @@ def market_caps(codes):
     return caps
 
 
-def main():
+def write_list(path, items):
+    """한 줄에 한 종목으로 저장 (git에서 바뀐 종목만 보이게)"""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write('{"updated": "%s", "items": [\n' % date.today().isoformat())
+        f.write(',\n'.join(json.dumps(i, ensure_ascii=False) for i in items))
+        f.write('\n]}\n')
+
+
+def update_kr():
     kospi = kind_list('stockMkt', 'K')
     kosdaq = kind_list('kosdaqMkt', 'Q')
     etf = etf_list()
@@ -109,14 +123,88 @@ def main():
     # 시가총액 큰 순서로 (검색에서 같은 순위면 파일 앞쪽 = 큰 회사가 먼저 나와요)
     caps = market_caps([i[0] for i in items])
     items.sort(key=lambda i: -caps.get(i[0], 0))
-
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    with open(OUT, 'w', encoding='utf-8', newline='\n') as f:
-        # 한 줄에 한 종목 (git에서 바뀐 종목만 보이게)
-        f.write('{"updated": "%s", "items": [\n' % date.today().isoformat())
-        f.write(',\n'.join(json.dumps(i, ensure_ascii=False) for i in items))
-        f.write('\n]}\n')
+    write_list(OUT, items)
     print(f'{OUT}: 코스피 {len(kospi)}, 코스닥 {len(kosdaq)}, ETF {len(etf)} → 모두 {len(items)}개')
+
+
+# ---------- 미국 종목 (data/us-stocks.json) ----------
+
+US_OUT = os.path.join(ROOT, 'data', 'us-stocks.json')
+US_STOCKS = 3000      # 주식은 시가총액 큰 순서로 이만큼
+US_ETFS = 300         # ETF는 거래대금 큰 순서로 이만큼
+NAVER_US = 'https://api.stock.naver.com/stock/exchange/{}/marketValue?page={}&pageSize=100'
+TV_SCAN = 'https://scanner.tradingview.com/america/scan'
+
+
+def tv_scan(body):
+    """트레이딩뷰 scanner (POST JSON) — 앱의 core/tradingview.js와 같은 주소"""
+    req = urllib.request.Request(TV_SCAN, data=json.dumps(body).encode('utf-8'), headers=UA, method='POST')
+    with urllib.request.urlopen(req, timeout=30) as res:
+        return json.loads(res.read().decode('utf-8'))['data']
+
+
+def naver_us(exchange, limit):
+    """네이버 해외주식 목록 (시가총액 순): 코드, 한글 이름, 영문 이름, 시가총액"""
+    rows = []
+    page = 1
+    while len(rows) < limit:
+        data = json.loads(decode(get(NAVER_US.format(exchange, page))))
+        stocks = data.get('stocks') or []
+        if not stocks:
+            break
+        for s in stocks:
+            cap = float(s.get('marketValueRaw') or 0)
+            # 네이버는 'BRK B', 트레이딩뷰는 'BRK.B' (여러 종류 주식)
+            rows.append([s['symbolCode'].replace(' ', '.'),(s.get('stockName') or '').strip(), (s.get('stockNameEng') or '').strip(), cap])
+        page += 1
+        time.sleep(0.2)
+    return rows[:limit]
+
+
+def update_us():
+    stocks = naver_us('NASDAQ', US_STOCKS) + naver_us('NYSE', US_STOCKS) + naver_us('AMEX', 400)
+    stocks.sort(key=lambda r: -r[3])
+    stocks = stocks[:US_STOCKS]
+    if len(stocks) < 1000:
+        sys.exit(f'미국 종목이 너무 적어요 ({len(stocks)}). 파일을 바꾸지 않았어요.')
+
+    # 트레이딩뷰 거래소 찾기 (네이버와 다를 때가 있어요. 예: ET는 네이버 AMEX인데 트레이딩뷰는 NYSE/AMEX 중 하나)
+    where = {}
+    symbols = [r[0] for r in stocks]
+    for i in range(0, len(symbols), 300):
+        chunk = symbols[i:i + 300]
+        rows = tv_scan({'filter': [{'left': 'name', 'operation': 'in_range', 'right': chunk}],
+                        'columns': ['name', 'exchange'], 'range': [0, 1000]})
+        for row in rows:
+            name, exchange = row['d']
+            if exchange in ('NASDAQ', 'NYSE', 'AMEX') and name not in where:
+                where[name] = exchange
+        time.sleep(0.2)
+
+    items = [[sym, ko, en, where[sym], 'S'] for sym, ko, en, _ in stocks if sym in where]
+
+    # ETF: 트레이딩뷰에서 거래대금 큰 순서로 (네이버 목록에는 미국 ETF가 없어서 영문 이름만)
+    etfs = tv_scan({'filter': [{'left': 'type', 'operation': 'equal', 'right': 'fund'},
+                               {'left': 'subtype', 'operation': 'equal', 'right': 'etf'}],
+                    'sort': {'sortBy': 'Value.Traded', 'sortOrder': 'desc'},
+                    'columns': ['name', 'description', 'exchange'], 'range': [0, US_ETFS]})
+    have = {i[0] for i in items}
+    etf_items = [[d[0], '', d[1], d[2], 'E'] for d in (row['d'] for row in etfs) if d[0] not in have]
+    items += etf_items
+
+    write_list(US_OUT, items)
+    print(f'{US_OUT}: 주식 {len(items) - len(etf_items)}, ETF {len(etf_items)} → 모두 {len(items)}개')
+
+
+def main():
+    """py tools/update-stocks.py        → 국내 + 미국
+       py tools/update-stocks.py kr     → 국내만
+       py tools/update-stocks.py us     → 미국만"""
+    which = sys.argv[1] if len(sys.argv) > 1 else 'all'
+    if which in ('all', 'kr'):
+        update_kr()
+    if which in ('all', 'us'):
+        update_us()
 
 
 if __name__ == '__main__':

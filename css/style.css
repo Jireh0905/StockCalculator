@@ -1519,6 +1519,14 @@ body.sheet-open .sheet { transform: translate(-50%, 0); visibility: visible; }
 .st-chart img { display: block; width: 100%; height: auto; }
 .st-chart .mk-msg { justify-content: center; min-height: 120px; background: var(--surface-2); color: var(--text-3); }
 .st-page .link-row { grid-template-columns: 1fr 1fr; }
+/* 해외: 시가총액 아래 원화 환산, 프리·애프터마켓 등락 */
+.st-rows small.st-sub { display: block; margin-top: 1px; font-size: 0.75rem; font-weight: 500; color: var(--text-3); }
+.st-rows small.tone-up { color: var(--up); }
+.st-rows small.tone-down { color: var(--down); }
+/* 해외 차트: 트레이딩뷰 위젯 (iframe) */
+.st-tv { height: 420px; overflow: hidden; border-radius: var(--radius-sm); background: var(--surface-2); }
+.st-tv .mk-msg { justify-content: center; height: 100%; }
+@media (max-width: 480px) { .st-tv { height: 360px; } }
 .st-page .mk-msg small { display: block; color: var(--text-3); }
 
 /* 넓을 때: 왼쪽(가격·가치) + 오른쪽(차트·계산기로) */

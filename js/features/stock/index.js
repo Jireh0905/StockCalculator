@@ -1,19 +1,24 @@
 /**
- * stock/index.js — 종목 정보 (국내 종목 검색 → 실시간 시세·가치·배당·차트 → 계산기로)
+ * stock/index.js — 종목 정보 (종목 검색 → 시세·가치·배당·차트 → 계산기로)
  *
- * 데이터
- *   검색 ........ data/stocks.json (core/stock-search.js)
- *   시세·가치 ... 네이버 증권 실시간 (core/naver.js, JSONP, 비공식)
- *   차트 ........ 네이버 증권 차트 그림 (<img>라서 보여주기만, 값은 못 꺼내요)
+ * 맨 위 [국내 주식 | 해외 주식]은 계산기와 같은 선택이에요 (markets: true → 고른 종목도 시장마다 따로 기억).
+ *
+ *              국내                                         해외 (미국)
+ *   검색 ...... data/stocks.json                             data/us-stocks.json (+ 트레이딩뷰 검색)
+ *   시세 ...... 네이버 증권 실시간 (core/naver.js, JSONP)      트레이딩뷰 15분 지연 (core/tradingview.js, JSON)
+ *   차트 ...... 네이버 차트 그림 (<img>)                      트레이딩뷰 차트 위젯 (iframe, 분봉~월봉)
+ *   카드 ...... 이 파일                                       us-view.js
+ * 둘 다 비공식 경로라 바뀌면 그 카드만 "불러오지 못했어요"가 돼요.
  *
  * 계산기가 아니라서 기록 버튼이 없어요 (records: false). 고른 종목·차트 종류는 입력값처럼 기억해요.
- * 국내 종목만 다뤄요 (해외 종목은 나중에).
  */
 import { createStockSearch, MARKET_NAMES, escapeHtml } from '../../core/stock-search.js';
 import { loadItems } from '../../core/naver.js';
+import { loadUsQuote } from '../../core/tradingview.js';
 import { isOnline, onNetworkChange } from '../../core/network.js';
-import { setMarket } from '../../core/session.js';
 import { won, clockTime } from '../../core/format.js';
+import { fixed, sign, tone, arrow, row, titleHtml, rangeHtml, linksCard } from './parts.js';
+import { usPriceCard, usValueCard, usChartCard, usTitle, mountUsChart, usd } from './us-view.js';
 
 /** 장중에 이 화면을 보고 있으면 이 간격으로 시세를 다시 받아요 */
 const AUTO_REFRESH_MS = 30 * 1000;
@@ -31,8 +36,6 @@ const chartUrl = (kind, code) =>
 
 /* ---------- 숫자 글자 ---------- */
 
-const fixed = (n, d = 2) => n.toLocaleString('ko-KR', { minimumFractionDigits: d, maximumFractionDigits: d });
-
 /** 큰 원화: 1,204조 2,000억 → "1,204.2조", 2,580억 → "2,581억" */
 function bigWon(n) {
     if (n == null) return '—';
@@ -41,18 +44,12 @@ function bigWon(n) {
     return `${won(n)}원`;
 }
 
-const sign = (n) => (n > 0 ? '+' : n < 0 ? '−' : '');
-const tone = (n) => (n > 0 ? 'up' : n < 0 ? 'down' : 'flat');
-const arrow = (n) => (n > 0 ? '▲' : n < 0 ? '▼' : '–');
-
 /** PER·PBR: 주가 ÷ 주당 값. 주당 값이 0 이하면 "적자"/"—" */
 function ratio(price, perShare, negative = '적자') {
     if (perShare == null) return '—';
     if (perShare <= 0) return negative;
     return `${fixed(price / perShare)}배`;
 }
-
-const row = (label, value, cls = '') => `<li><span>${label}</span><span class="${cls}">${value}</span></li>`;
 
 /* ---------- 화면 조각 ---------- */
 
@@ -74,35 +71,17 @@ function waitingCard(stock, q) {
     }
     return `
         <section class="card result-card">
-            ${titleHtml(stock, null)}
+            ${stock.kind === 'us' ? usTitle(stock) : krTitle(stock, null)}
             <p class="mk-msg ${q?.status === 'error' ? 'is-error' : ''}">${msg}</p>
         </section>`;
 }
 
-function titleHtml(stock, d) {
+/** 국내 제목: 이름 · 코드 · 시장 + 장중/장 마감 배지 */
+function krTitle(stock, d) {
     // 정규장 밖(프리·애프터마켓, NXT)에서도 거래 중이면 그 이름으로
     const live = d?.session && d.session !== '정규장' ? `${d.session} 거래 중` : '장중';
     const badge = d ? (d.open ? `<span class="st-badge is-live">${live}</span>` : '<span class="st-badge">장 마감</span>') : '';
-    return `
-        <div class="st-title">
-            <h2>${escapeHtml(stock.name)}</h2>
-            <span class="st-code">${stock.code} · ${MARKET_NAMES[stock.market] ?? ''}</span>
-            ${badge}
-        </div>`;
-}
-
-/** 52주 범위 막대: 최저 ─ ● ─ 최고 */
-function rangeHtml(d) {
-    if (d.high52 == null || d.low52 == null || d.high52 <= d.low52) return '';
-    const at = Math.min(Math.max((d.price - d.low52) / (d.high52 - d.low52), 0), 1) * 100;
-    const fromHigh = (d.price / d.high52 - 1) * 100;
-    const fromLow = (d.price / d.low52 - 1) * 100;
-    return `
-        <div class="st-range">
-            <div class="st-range-head"><span>52주 최저 <b>${won(d.low52)}</b></span><span>최고 <b>${won(d.high52)}</b></span></div>
-            <div class="st-range-bar" role="img" aria-label="52주 범위 중 ${Math.round(at)}% 위치"><i style="left:${at.toFixed(1)}%"></i></div>
-            <p class="st-range-note">최고가보다 ${sign(fromHigh)}${fixed(Math.abs(fromHigh), 1)}% · 최저가보다 ${sign(fromLow)}${fixed(Math.abs(fromLow), 1)}%</p>
-        </div>`;
+    return titleHtml(stock.name, `${stock.code} · ${MARKET_NAMES[stock.market] ?? ''}`, badge);
 }
 
 function priceCard(stock, q) {
@@ -112,7 +91,7 @@ function priceCard(stock, q) {
     const stale = q.status === 'error' ? ' · <button type="button" class="mk-stale" data-retry data-needs-net>새 값을 못 받았어요 ↻</button>' : '';
     return `
         <section class="card result-card">
-            ${titleHtml(stock, d)}
+            ${krTitle(stock, d)}
             <div class="result-amount">${won(d.price)}<small>원</small></div>
             <span class="rate-pill pill-${tone(change)}">${arrow(change)} ${won(Math.abs(change))} (${sign(rate)}${fixed(Math.abs(rate))}%)</span>
             <p class="st-time">${clockTime(new Date(q.time))} 기준${d.open ? ' · 거래 중에는 30초마다 새로 받아요' : ''}${stale}</p>
@@ -126,7 +105,7 @@ function priceCard(stock, q) {
                 ${d.amount != null ? row('거래대금', bigWon(d.amount)) : ''}
                 ${d.shares != null ? row('시가총액', bigWon(d.price * d.shares)) : ''}
             </ul>
-            ${rangeHtml(d)}
+            ${rangeHtml(d, won)}
         </section>`;
 }
 
@@ -178,25 +157,6 @@ function chartCard(stock, kind) {
         </section>`;
 }
 
-function linksCard(d) {
-    const btn = (attr, title, sub) => `
-        <button type="button" class="link-btn" ${attr}>
-            <span>${title} <span aria-hidden="true">→</span></span><small>${sub}</small>
-        </button>`;
-    return `
-        <section class="card">
-            <h2 class="card-title">계산기로 이어서</h2>
-            <div class="link-row">
-                ${btn('data-send="profit"', '손익 계산', `현재가 ${won(d.price)}원을 매도가로`)}
-                ${btn('data-send="target"', '목표가 계산', '현재가를 매수가로')}
-                ${btn('data-send="split"', '분할 매매 계산', '현재가를 1차 추가 매수가로')}
-                ${btn('data-send="plan"', '하락 대응 계산', '현재가 칸에')}
-                ${d.dps > 0 ? btn('data-send="dividend"', '배당 계산', `주가·주당 배당금 ${won(d.dps)}원`) : ''}
-            </div>
-            <p class="mk-note">국내 주식 계산기로 열려요. 평단·수량처럼 내 정보는 계산기에 있던 값을 그대로 둬요.</p>
-        </section>`;
-}
-
 /* ---------- 화면 ---------- */
 
 /** 시세 상태 (모듈 변수라 화면을 떠났다 와도 남아요) { code, status, data, time, error } */
@@ -206,11 +166,12 @@ export default {
     id: 'stock',
     name: '종목 정보',
     shortName: '종목 정보',
-    desc: '국내 종목 검색 · 실시간 가격·PER·PBR·배당·차트',
+    desc: '국내·미국 종목 검색 · 가격·PER·PBR·배당·차트',
     group: '정보',
     icon: 'stock',
     color: 'c10',
     records: false,
+    markets: true,   // 맨 위 [국내 | 해외] (계산기와 같은 선택, 입력값도 시장마다 따로)
 
     mount(view, ctx) {
         view.innerHTML = `
@@ -229,7 +190,9 @@ export default {
             </div>`;
         const slot = (name) => view.querySelector(`[data-slot="${name}"]`);
 
-        let stock = ctx.inputs?.stock ?? null;       // { code, name, market }
+        const us = ctx.market === 'global';
+        let stock = ctx.inputs?.stock ?? null;       // 국내 { kind:'kr', code, name, market } / 해외 { kind:'us', code, name, en, exchange, type }
+        if (stock && (stock.kind ?? 'kr') !== (us ? 'us' : 'kr')) stock = null;
         let chartKind = CHARTS.some(c => c[0] === ctx.inputs?.chart) ? ctx.inputs.chart : DEFAULT_CHART;
         const remember = () => ctx.saveInputs({ stock, chart: chartKind });
 
@@ -245,10 +208,24 @@ export default {
                 slot('price').innerHTML = waitingCard(stock, q);
                 slot('value').innerHTML = '';
                 slot('links').innerHTML = '';
+            } else if (us) {
+                slot('price').innerHTML = usPriceCard(stock, q);
+                slot('value').innerHTML = usValueCard(stock, q.data);
+                slot('links').innerHTML = linksCard(q.data, usd, '해외 주식');
             } else {
                 slot('price').innerHTML = priceCard(stock, q);
                 slot('value').innerHTML = valueCard(stock, q.data);
-                slot('links').innerHTML = linksCard(q.data);
+                slot('links').innerHTML = linksCard(q.data, (n) => `${won(n)}원`, '국내 주식');
+            }
+            if (us) {
+                // 해외 차트: 트레이딩뷰 위젯은 종목이 바뀌거나 연결될 때만 새로 넣어요 (다시 넣으면 새로 로딩돼서)
+                const key = `${stock.exchange}:${stock.code}|${isOnline()}`;
+                if (slot('chart').dataset.key !== key) {
+                    slot('chart').innerHTML = usChartCard(stock);
+                    slot('chart').dataset.key = key;
+                    mountUsChart(slot('chart').querySelector('[data-tv-chart]'), stock);
+                }
+                return;
             }
             // 차트는 종목·종류가 바뀌었을 때만 다시 그려요 (시세를 새로 받을 때마다 그림이 깜빡이지 않게)
             const chartKey = `${stock.code}|${chartKind}|${isOnline()}`;
@@ -275,8 +252,16 @@ export default {
             quote = { ...(quote?.code === code ? quote : { code }), status: 'loading' };
             draw();
             try {
-                const { time, items } = await loadItems([code]);
-                const data = items.find(it => it.code === code);
+                let data;
+                let time;
+                if (us) {
+                    data = await loadUsQuote(stock);
+                    time = data.time;
+                } else {
+                    const res = await loadItems([code]);
+                    data = res.items.find(it => it.code === code);
+                    time = res.time;
+                }
                 if (!data) throw new Error('시세가 없어요 (거래 정지·상장 폐지일 수 있어요)');
                 if (stock?.code === code) quote = { code, status: 'ok', data, time };
             } catch (err) {
@@ -291,7 +276,7 @@ export default {
             load();
         };
 
-        createStockSearch(view.querySelector('[data-search]'), { onPick: select, autofocus: !stock });
+        createStockSearch(view.querySelector('[data-search]'), { kind: us ? 'us' : 'kr', onPick: select, autofocus: !stock });
 
         view.addEventListener('click', (e) => {
             if (e.target.closest('[data-retry]')) return load();
@@ -305,9 +290,11 @@ export default {
             if (send && quote?.data) sendTo(send.dataset.send, quote.data);
         });
 
-        /** 계산기로 넘기기: 국내 시장으로 바꾼 뒤 (원화 가격이라서) 각 계산기의 receive가 받는 모양으로 */
+        /**
+         * 계산기로 넘기기: 각 계산기의 receive가 받는 모양으로.
+         * 국내/해외는 이 화면과 계산기가 같은 선택이라, 해외면 달러 값이 해외 계산기로 가요.
+         */
         function sendTo(target, d) {
-            setMarket('domestic');
             const payload = {
                 profit: { sellPrice: d.price },
                 target: { buyPrice: d.price },
@@ -326,11 +313,14 @@ export default {
             else draw();
         });
 
-        // 장중 자동 갱신: 이 화면을 보고 있고, 탭이 보이고, 온라인이고, 장중일 때만
+        // 자동 갱신: 이 화면을 보고 있고, 탭이 보이고, 온라인일 때만
+        //   국내는 거래 중일 때 30초마다, 해외는 15분 지연 값이라 1분마다 (30초 타이머 두 번에 한 번)
+        let ticks = 0;
         const autoTimer = setInterval(() => {
             if (!view.isConnected) return clearInterval(autoTimer);
-            if (document.hidden || !isOnline() || !stock) return;
-            if (quote?.code === stock.code && quote.data?.open) load();
+            if (document.hidden || !isOnline() || !stock || quote?.code !== stock.code) return;
+            ticks += 1;
+            if (us ? ticks % 2 === 0 : quote.data?.open) load();
         }, AUTO_REFRESH_MS);
 
         // 처음: 기억한 종목이 있으면 30초 안에 받은 값은 그대로, 아니면 새로 받기

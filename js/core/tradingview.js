@@ -57,6 +57,79 @@ export function delayText(mode) {
     return mode === 'streaming' ? '실시간' : '';
 }
 
+/* ---------- 미국 종목 ---------- */
+
+/** 미국 종목 한 개에 받는 칸 */
+const US_COLUMNS = [
+    'close', 'change', 'change_abs', 'open', 'high', 'low', 'volume',
+    'price_52_week_high', 'price_52_week_low',
+    'price_earnings_ttm', 'price_book_fq', 'earnings_per_share_basic_ttm',
+    'dps_common_stock_prim_issue_fy', 'dividends_yield_current', 'market_cap_basic',
+    'premarket_close', 'premarket_change', 'postmarket_close', 'postmarket_change',
+    'nav', 'aum', 'expense_ratio', 'type', 'update_mode', 'description',
+];
+
+/**
+ * 미국 종목 시세·가치 (트레이딩뷰, 보통 15분 지연)
+ * @param {{ code: string, exchange: string }} stock - 예: { code: 'AAPL', exchange: 'NASDAQ' }
+ * @returns {Promise<object>} 종목 정보 화면이 쓰는 모양 (국내 naver.js loadItems와 비슷하게)
+ */
+export async function loadUsQuote(stock) {
+    const ticker = `${stock.exchange}:${stock.code}`;
+    const rows = await scan([ticker], US_COLUMNS);
+    const r = rows.get(ticker);
+    const price = num(r?.close);
+    if (price == null) throw new Error('시세가 없어요');
+    const change = num(r.change_abs) ?? 0;
+    const extra = (close, pct) => (num(close) != null ? { price: close, rate: num(pct) ?? 0 } : null);
+    return {
+        code: stock.code,
+        name: r.description,
+        price,
+        prev: price - change,
+        change,
+        rate: num(r.change) ?? 0,
+        dayOpen: num(r.open), high: num(r.high), low: num(r.low), volume: num(r.volume),
+        high52: num(r.price_52_week_high), low52: num(r.price_52_week_low),
+        per: num(r.price_earnings_ttm), pbr: num(r.price_book_fq), eps: num(r.earnings_per_share_basic_ttm),
+        dps: num(r.dps_common_stock_prim_issue_fy),           // 1년 주당 배당금 (최근 회계연도, 달러)
+        yieldPct: num(r.dividends_yield_current),             // 배당 수익률 (%)
+        cap: num(r.market_cap_basic),
+        pre: extra(r.premarket_close, r.premarket_change),    // 프리마켓 (정규장 전)
+        post: extra(r.postmarket_close, r.postmarket_change), // 애프터마켓 (정규장 뒤)
+        isEtf: r.type === 'fund',
+        nav: num(r.nav), aum: num(r.aum), expense: num(r.expense_ratio),
+        delay: delayText(r.update_mode),
+        time: Date.now(),
+    };
+}
+
+/**
+ * 목록 파일에 없는 미국 종목 찾기 (코드나 영문 이름으로, 시가총액 순)
+ * @returns {Promise<Array<{ code, name, en, exchange, type }>>}
+ */
+export async function searchUs(query) {
+    const q = query.trim();
+    if (!/^[A-Za-z0-9 .&-]+$/.test(q)) return [];   // 영문·숫자만 (한글은 목록 파일에서 찾아요)
+    const body = (left) => ({
+        filter: [
+            { left, operation: 'match', right: q },
+            { left: 'exchange', operation: 'in_range', right: ['NASDAQ', 'NYSE', 'AMEX'] },
+        ],
+        sort: { sortBy: 'market_cap_basic', sortOrder: 'desc' },
+        columns: ['name', 'description', 'exchange', 'type'],
+        range: [0, 10],
+    });
+    const run = async (left) => {
+        const res = await netFetch(`${URL_BASE}/america/scan`, { method: 'POST', body: JSON.stringify(body(left)) });
+        if (!res.ok) return [];
+        const json = await res.json();
+        return (json.data ?? []).map(({ d }) => ({ code: d[0], name: d[1], en: d[1], exchange: d[2], type: d[3] === 'fund' ? 'E' : 'S' }));
+    };
+    const byCode = await run('name');
+    return byCode.length ? byCode : run('description');
+}
+
 /** 숫자면 그대로, 아니면 null (응답이 바뀌었을 때 엉뚱한 값을 보여주지 않게) */
 export const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
