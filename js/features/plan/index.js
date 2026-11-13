@@ -15,7 +15,8 @@ import { planAveraging, planStopRebuy } from './calculator.js';
 import { renderAvgResult, renderStopResult, stepMessage, signedPercent } from './result-view.js';
 import { bindNumberInputs, readValues, fillValues, readNumber, readInt } from '../../core/number-input.js';
 import { won } from '../../core/format.js';
-import { price, money, signedMoney, isGlobal } from '../../core/market.js';
+import { price, money, signedMoney, isGlobal, inputText } from '../../core/market.js';
+import { showReceived } from '../../core/received.js';
 
 const MAX_STEPS = 10;
 
@@ -28,6 +29,20 @@ export default {
     icon: 'plan',
     color: 'c6',
     markets: true,
+
+    /**
+     * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 손익 계산기에서 손실 → "하락 대응 계산")
+     * 평단·보유 수량·현재가만 바꾸고, 물타기 단계·손절 계획·수수료는 그대로 둬요.
+     *
+     * @param {object | null} inputs - 지금 시장의 저장된 입력값
+     * @param {{ avgPrice: number, holdQty: number, curPrice: number }} payload - 손익 계산기의 매수가·수량·매도가
+     */
+    receive(inputs, { avgPrice, holdQty, curPrice }) {
+        return {
+            ...inputs,
+            values: { ...inputs?.values, avgPrice: inputText(avgPrice), holdQty: won(holdQty), curPrice: inputText(curPrice) },
+        };
+    },
 
     mount(view, ctx) {
         const market = ctx.market;
@@ -208,5 +223,12 @@ export default {
         }));
         bindNumberInputs(view, changed);
         showTab(tab);
+
+        // 다른 기능에서 평단·수량·현재가를 받아 들어왔으면: 강조 + 알림
+        if (ctx.received) {
+            const { from, payload } = ctx.received;
+            showReceived(view, ['avgPrice', 'holdQty', 'curPrice'],
+                `${from?.shortName ?? '다른 계산기'}에서 평단·수량·현재가를 넣었어요 (${price(payload.avgPrice, market)} × ${won(payload.holdQty)}주 → ${price(payload.curPrice, market)})`);
+        }
     },
 };

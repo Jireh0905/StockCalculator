@@ -1042,7 +1042,7 @@ body.drawer-open .scrim { opacity: 1; visibility: visible; }
     cursor: pointer;
     transition: background .15s, border-color .15s;
 }
-.link-btn small { font-size: 0.6875rem; font-weight: 500; color: var(--text-3); }
+.link-btn small { font-size: 0.6875rem; font-weight: 500; color: var(--text-3); word-break: keep-all; line-height: 1.35; text-align: center; }
 .link-btn:hover { background: var(--primary-weak); border-color: var(--primary); }
 .link-group + .save-btn { margin-top: 10px; }
 

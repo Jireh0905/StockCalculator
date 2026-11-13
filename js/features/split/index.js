@@ -71,20 +71,34 @@ export default {
     markets: true,
 
     /**
-     * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. (예: 하락 대응 → "분할 매수 계산")
-     * 분할 매수 탭으로 바꾸고, 보유 주식과 추가 매수 줄을 받은 값으로 바꿔요. (분할 매도 계획·수수료는 그대로)
+     * 다른 기능이 값을 넘겨줄 때 app.js가 불러요. 보유 주식(평단·수량)은 항상 받은 값으로 바꾸고,
+     *   buys가 오면 (예: 하락 대응 → "분할 매수 계산")  분할 매수 탭 + 추가 매수 줄을 받은 단계로
+     *   sells가 오면 (예: 손익 → "분할 매매 계산")      분할 매도 탭 + 매도 줄을 받은 값으로 (해외는 환율도)
+     * 받지 않은 쪽(매수 계획 / 매도 계획)과 수수료·세금은 그대로 둬요.
      *
      * @param {object | null} inputs - 지금 시장의 저장된 입력값
-     * @param {{ avgPrice: number, holdQty: number, buys: Array<{ price: number, qty: number }> }} payload
+     * @param {{ avgPrice: number, holdQty: number, buys?: Array<{ price: number, qty: number }>,
+     *           sells?: Array<{ price: number, qty: number }>, fxBuy?: number, fxSell?: number }} payload
      * @returns 새 입력값 (ctx.inputs와 같은 모양)
      */
-    receive(inputs, { avgPrice, holdQty, buys }) {
+    receive(inputs, { avgPrice, holdQty, buys, sells, fxBuy, fxSell }) {
         const saved = normalize(inputs);
+        const values = { ...saved.values, avgPrice: inputText(avgPrice), holdQty: won(holdQty) };
+        if (sells) {
+            if (fxBuy > 0) values.fxBuy = inputText(fxBuy);
+            if (fxSell > 0) values.fxSell = inputText(fxSell);
+            return {
+                ...saved,
+                tab: 'sell',
+                values,
+                sells: sells.slice(0, MAX_ROWS).map(s => ({ sellPrice: inputText(s.price), sellQty: won(s.qty) })),
+            };
+        }
         return {
             ...saved,
             tab: 'buy',
-            values: { ...saved.values, avgPrice: inputText(avgPrice), holdQty: won(holdQty) },
-            buys: buys.slice(0, MAX_ROWS).map(b => ({ buyPrice: inputText(b.price), buyQty: won(b.qty) })),
+            values,
+            buys: (buys ?? []).slice(0, MAX_ROWS).map(b => ({ buyPrice: inputText(b.price), buyQty: won(b.qty) })),
         };
     },
 
@@ -263,8 +277,18 @@ export default {
         // 다른 기능에서 값을 받아 들어왔으면: 바뀐 칸을 강조하고 무엇이 들어왔는지 알려줘요
         if (ctx.received) {
             const { from, payload } = ctx.received;
-            showReceived(view, ['avgPrice', 'holdQty', 'buyPrice', 'buyQty'],
-                `${from?.shortName ?? '다른 계산기'} 계획의 추가 매수 ${payload.buys.length}건을 넣었어요`);
+            const who = from?.shortName ?? '다른 계산기';
+            if (payload.sells) {
+                showReceived(view, ['avgPrice', 'holdQty', 'sellPrice', 'sellQty', 'fxBuy', 'fxSell'],
+                    `${who}에서 평단 ${price(payload.avgPrice, market)} × ${won(payload.holdQty)}주와 매도가를 넣었어요. 수량을 나눠 보세요`);
+                // 바로 나눠 볼 수 있게 1차 매도 수량 칸으로 커서를 옮기고 전체 선택
+                const qty = view.querySelector('.sell-row input[name="sellQty"]');
+                qty?.focus({ preventScroll: true });
+                qty?.select();
+            } else {
+                showReceived(view, ['avgPrice', 'holdQty', 'buyPrice', 'buyQty'],
+                    `${who} 계획의 추가 매수 ${payload.buys.length}건을 넣었어요`);
+            }
         }
     },
 };

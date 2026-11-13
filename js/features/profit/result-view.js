@@ -10,11 +10,14 @@ import { fxSplitHtml, fxHintHtml } from '../../core/fx-split.js';
 /**
  * @param {HTMLElement} container - 결과를 그릴 영역
  * @param {object | null} r - calculateProfit()의 결과 (입력이 덜 됐으면 null)
- * @param {{ onSave: () => void, onSendToRecover: () => void, onSendToTarget: () => void, fx?: object | null }} handlers
- *   onSave "기록에 저장", onSendToRecover 손실일 때 "손실 회복 계산", onSendToTarget 이익일 때 "목표가 계산"
+ * @param {{ onSave: () => void, onSendToRecover: () => void, onSendToPlan: () => void,
+ *           onSendToTarget: () => void, onSendToSplit: () => void, fx?: object | null }} handlers
+ *   onSave "기록에 저장"
+ *   손실일 때: onSendToRecover "손실 회복 계산", onSendToPlan "하락 대응 계산"
+ *   이익일 때: onSendToTarget "목표가 계산", onSendToSplit "분할 매매 계산"
  *   fx: 해외일 때 주가·환율 몫으로 나눈 손익 (core/fx-split.js의 splitFx 결과)
  */
-export function renderResult(container, r, { onSave, onSendToRecover, onSendToTarget, fx = null }) {
+export function renderResult(container, r, { onSave, onSendToRecover, onSendToPlan, onSendToTarget, onSendToSplit, fx = null }) {
     if (!r) {
         container.className = 'card result-card';
         container.innerHTML = `
@@ -84,6 +87,8 @@ export function renderResult(container, r, { onSave, onSendToRecover, onSendToTa
 
     container.querySelector('[data-send-recover]')?.addEventListener('click', onSendToRecover);
     container.querySelector('[data-send-target]')?.addEventListener('click', onSendToTarget);
+    container.querySelector('[data-send-plan]')?.addEventListener('click', onSendToPlan);
+    container.querySelector('[data-send-split]')?.addEventListener('click', onSendToSplit);
     container.querySelector('.save-btn').addEventListener('click', onSave);
 }
 
@@ -111,9 +116,12 @@ function nextStep(r, dir) {
         return `
         <div class="link-group" role="group" aria-label="이어서 계산">
             <div class="link-group-title">손실이 났다면</div>
-            <div class="link-row single">
+            <div class="link-row">
                 <button type="button" class="link-btn" data-send-recover>
-                    <span>손실 회복 계산 <span aria-hidden="true">→</span></span><small>손실률 ${Math.abs(r.rate).toFixed(2)}%를 넘겨요 · 본전까지 몇 % 올라야 할까</small>
+                    <span>손실 회복 계산 <span aria-hidden="true">→</span></span><small>손실률 ${Math.abs(r.rate).toFixed(2)}% · 본전까지 몇 %?</small>
+                </button>
+                <button type="button" class="link-btn" data-send-plan>
+                    <span>하락 대응 계산 <span aria-hidden="true">→</span></span><small>매수가·수량·매도가 · 물타기? 손절?</small>
                 </button>
             </div>
         </div>`;
@@ -122,9 +130,12 @@ function nextStep(r, dir) {
         return `
         <div class="link-group" role="group" aria-label="이어서 계산">
             <div class="link-group-title">이익이 났다면</div>
-            <div class="link-row single">
+            <div class="link-row">
                 <button type="button" class="link-btn" data-send-target>
-                    <span>목표가 계산 <span aria-hidden="true">→</span></span><small>매수가를 넘겨요 · 목표 수익률이 되는 매도가는?</small>
+                    <span>목표가 계산 <span aria-hidden="true">→</span></span><small>매수가 · 목표 수익률의 매도가는?</small>
+                </button>
+                <button type="button" class="link-btn" data-send-split>
+                    <span>분할 매매 계산 <span aria-hidden="true">→</span></span><small>매수가·수량·매도가 · 나눠 팔면?</small>
                 </button>
             </div>
         </div>`;

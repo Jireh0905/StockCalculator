@@ -107,8 +107,17 @@ export default {
                     : null,
                 // 손실이면: 수수료·세금까지 뺀 손실률을 손실 회복 계산기로 (본전까지 몇 % 올라야 하나)
                 onSendToRecover: () => ctx.sendTo('recover', { loss: Math.round(Math.abs(result.rate) * 100) / 100 }),
+                // 손실이면: 하락 대응 계산기로 — 매수가를 평단, 수량을 보유 수량, 매도가를 현재가로 (물타기할까, 손절할까)
+                onSendToPlan: () => ctx.sendTo('plan', { avgPrice: input.buyPrice, holdQty: result.quantity, curPrice: input.sellPrice }),
                 // 이익이면: 매수가를 목표가 계산기로 (목표 수익률이 되는 매도가는?)
-                onSendToTarget: () => ctx.sendTo('target', { buyPrice: readInput(view, tab).buyPrice }),
+                onSendToTarget: () => ctx.sendTo('target', { buyPrice: input.buyPrice }),
+                // 이익이면: 분할 매매 계산기의 분할 매도로 — 평단·보유 수량, 1차 매도에 이 매도가 × 수량 (해외는 환율도)
+                onSendToSplit: () => ctx.sendTo('split', {
+                    avgPrice: input.buyPrice,
+                    holdQty: result.quantity,
+                    sells: [{ price: input.sellPrice, qty: result.quantity }],
+                    ...(tab === 'global' ? { fxBuy: result.rateBuy, fxSell: result.rateSell } : {}),
+                }),
             });
         }
 
