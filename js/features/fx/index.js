@@ -1,15 +1,15 @@
 /**
- * fx/index.js — 시장 지표 (환율·미국 금리·금·비트코인)
+ * fx/index.js — 시장 지표 (국내 증시·해외 선물·환율·금리·금·비트코인)
  *
  *   sources.js ... 출처마다 받아오기 (화면과 무관)
- *   index.js ..... 카드 그리기 + 새로고침 + 기준 환율로 쓰기 (이 파일)
+ *   index.js ..... 카드 그리기 + 새로고침 + 장중 자동 갱신 + 기준 환율로 쓰기 (이 파일)
  *
  * 계산기가 아니라서 국내/해외 버튼·입력값·기록이 없어요 (records: false → 기록 버튼도 숨겨요).
  *
- * 출처 6곳을 한꺼번에 요청하고, 하나씩 도착할 때마다 다시 그려요.
+ * 출처 7곳을 한꺼번에 요청하고, 하나씩 도착할 때마다 다시 그려요. (해외 선물은 TradingView 위젯)
  * 한 곳이 실패해도 그 줄만 "불러오지 못했어요 · 다시 시도"가 나오고 나머지는 그대로예요.
  */
-import { SOURCES, TENORS, dollarIndex, GRAMS_PER_OZ } from './sources.js';
+import { SOURCES, TENORS, dollarIndex, GRAMS_PER_OZ, KR_BASE_RATE } from './sources.js';
 import { getFx, setFx } from '../../core/session.js';
 import { showToast } from '../../core/toast.js';
 import { clockTime } from '../../core/format.js';
@@ -17,6 +17,8 @@ import { isOnline, onNetworkChange } from '../../core/network.js';
 
 /** 이 시간 안에 다시 들어오면 받아둔 값을 그대로 써요 (메뉴를 오갈 때마다 요청하지 않게) */
 const FRESH_MS = 60 * 1000;
+/** 장중 국내 증시 자동 갱신 간격 */
+const AUTO_REFRESH_MS = 60 * 1000;
 
 /**
  * 출처별 상태. 모듈 변수라 화면을 떠났다 돌아와도 남아 있어요.
@@ -100,7 +102,72 @@ const staleNote = (id) => (state[id]?.status === 'error' && state[id]?.data && i
 /** 실시간 출처의 시각: "15:07" */
 const timeOf = (id) => clockTime(new Date(state[id].data.time));
 
-/* ---------- 카드 3개 ---------- */
+/* ---------- 카드 ---------- */
+
+function krCard() {
+    let body = placeholder('kr');
+    if (!body) {
+        body = state.kr.data.items.map(it => row(
+            it.name,
+            it.open ? '<span class="mk-live">장중</span>' : '장 마감',
+            fixed(it.value),
+            change(it.value, it.prev),
+        )).join('');
+    }
+    const meta = state.kr?.data ? `네이버 증권 · ${timeOf('kr')}${staleNote('kr')}` : '네이버 증권';
+    return `
+        <section class="card mk-card">
+            <h2 class="card-title">국내 증시</h2>
+            <p class="mk-meta">${meta}</p>
+            <ul class="mk-list">${body}</ul>
+            <p class="mk-note">네이버 증권 시세예요. 공식 API가 아니라서 네이버가 바꾸면 안 보일 수 있어요.
+                장중에 이 화면을 보고 있으면 1분마다 새로 받아요.</p>
+        </section>`;
+}
+
+/**
+ * 해외 선물: TradingView 위젯 (그림으로 끼워 넣는 iframe이라 값을 꺼낼 수는 없어요)
+ * 진짜 선물(NQ1! 등)은 무료 위젯에서 막혀 있어서, 선물을 따라 움직이는 CFD 시세를 보여줘요.
+ */
+const FUTURES = [
+    ['OANDA:NAS100USD', '나스닥100'],
+    ['TVC:USOIL', 'WTI 원유'],
+    ['TVC:GOLD', '금'],
+];
+
+/** 해외 선물 카드의 겉모양 (위젯은 mountWidget이 한 번만 넣어요. 다시 그리면 위젯이 새로 로딩돼서) */
+const futuresCard = () => `
+    <section class="card mk-card">
+        <h2 class="card-title">해외 선물 <span class="card-title-note">참고</span></h2>
+        <p class="mk-meta">TradingView · 실시간</p>
+        <div class="mk-widget" data-widget></div>
+        <p class="mk-note">선물을 따라 움직이는 CFD 시세예요. 그림으로 끼워 넣은 것이라 계산기에 넣을 수는 없어요.</p>
+    </section>`;
+
+/** 위젯 넣기 (오프라인이면 안내만, 연결되면 다시 불러요) */
+function mountWidget(box) {
+    if (!box || box.dataset.loaded) return;
+    if (!isOnline()) {
+        box.innerHTML = '<p class="mk-msg">인터넷에 연결되면 보여요</p>';
+        return;
+    }
+    box.dataset.loaded = 'true';
+    box.innerHTML = '<div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>';
+    // TradingView 위젯은 <script> 안에 설정(JSON)을 넣는 방식이에요
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js';
+    script.async = true;
+    script.textContent = JSON.stringify({
+        width: '100%',
+        height: 190,
+        locale: 'kr',
+        colorTheme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+        isTransparent: true,
+        showSymbolLogo: false,
+        symbolsGroups: [{ name: '해외 선물', symbols: FUTURES.map(([name, displayName]) => ({ name, displayName })) }],
+    });
+    box.firstChild.append(script);
+}
 
 function fxCard() {
     const s = state.fx;
@@ -128,7 +195,7 @@ function fxCard() {
     }
     const meta = s?.data ? `유럽중앙은행 기준가 · ${shortDate(s.data.date)} (전 영업일 ${shortDate(s.data.prevDate)} 대비)` : '유럽중앙은행 기준가';
     return `
-        <section class="card mk-card" style="grid-area: fx">
+        <section class="card mk-card">
             <h2 class="card-title">환율</h2>
             <p class="mk-meta">${meta}${staleNote('fx')}</p>
             <ul class="mk-list">${body}</ul>
@@ -162,12 +229,18 @@ function ratesCard() {
         ? `미국 재무부 · ${shortDate(state.treasury.data.date)} 기준 (${shortDate(state.treasury.data.prevDate)} 대비)${staleNote('treasury')}`
         : '미국 재무부';
 
+    // 한국 기준 금리: 받아올 곳이 없어서 코드에 적어둔 값 (sources.js의 KR_BASE_RATE)
+    const kr = KR_BASE_RATE;
+    const krRows = row('기준 금리', `${kr.since.slice(0, 4)}년 ${shortDate(kr.since)}부터 · 전 ${fixed(kr.prev)}%`, `${fixed(kr.rate)}%`, bpChange(kr.rate, kr.prev));
+    const krMeta = '한국은행 · 코드에 적어 둔 값 (바뀌면 직접 고쳐요)';
+
     return `
-        <section class="card mk-card" style="grid-area: rates">
-            <h2 class="card-title">미국 금리</h2>
+        <section class="card mk-card">
+            <h2 class="card-title">금리</h2>
             <ul class="mk-list">
-                ${section('기준 금리', fedMeta)}${fed}
-                ${section('국채 금리', ustMeta)}${ust}
+                ${section('한국 기준 금리', krMeta)}${krRows}
+                ${section('미국 기준 금리', fedMeta)}${fed}
+                ${section('미국 국채 금리', ustMeta)}${ust}
             </ul>
             <p class="mk-note">bp는 0.01%p예요. 장단기 금리차가 마이너스(역전)면 짧게 빌리는 금리가 더 높다는 뜻이에요.</p>
         </section>`;
@@ -194,7 +267,7 @@ function coinCard() {
     const coinMeta = `업비트 · 바이낸스${times.length ? ` · ${times[0]}` : ''}${staleNote('upbit')}${staleNote('binance')}`;
 
     return `
-        <section class="card mk-card" style="grid-area: coin">
+        <section class="card mk-card">
             <h2 class="card-title">금·비트코인</h2>
             <ul class="mk-list">
                 ${section('금 현물', goldMeta)}${gold}
@@ -210,7 +283,7 @@ export default {
     id: 'fx',
     name: '시장 지표',
     shortName: '시장 지표',
-    desc: '환율·미국 금리·금·비트코인',
+    desc: '국내 증시·해외 선물·환율·금리·금·비트코인',
     group: '정보',
     icon: 'market',
     color: 'c9',
@@ -223,15 +296,32 @@ export default {
                     <p class="mk-updated" data-updated></p>
                     <button type="button" class="ghost-btn mk-refresh" data-refresh data-needs-net>새로고침</button>
                 </div>
-                <div class="mk-grid" data-cards></div>
+                <div class="mk-grid">
+                    <div class="mk-col">
+                        <div class="mk-slot" data-slot="kr"></div>
+                        <div class="mk-slot" data-slot="fx"></div>
+                        <div class="mk-slot" data-slot="coin"></div>
+                    </div>
+                    <div class="mk-col">
+                        <div class="mk-slot" data-slot="fut">${futuresCard()}</div>
+                        <div class="mk-slot" data-slot="rates"></div>
+                    </div>
+                </div>
             </div>`;
-        const cards = view.querySelector('[data-cards]');
         const updated = view.querySelector('[data-updated]');
         const refreshBtn = view.querySelector('[data-refresh]');
+        const widgetBox = view.querySelector('[data-widget]');
+        // 다시 그리는 카드 (해외 선물 위젯은 한 번만 넣고 다시 그리지 않아요)
+        const slots = {
+            kr: krCard, fx: fxCard, rates: ratesCard, coin: coinCard,
+        };
+        mountWidget(widgetBox);
 
         const draw = () => {
             if (!view.isConnected) return;   // 기다리는 동안 다른 화면으로 갔으면 그리지 않아요
-            cards.innerHTML = fxCard() + ratesCard() + coinCard();
+            Object.entries(slots).forEach(([id, card]) => {
+                view.querySelector(`[data-slot="${id}"]`).innerHTML = card();
+            });
             const loading = Object.values(state).some(s => s.status === 'loading');
             const online = isOnline();
             refreshBtn.toggleAttribute('data-busy', loading);  // 불러오는 중이면 app.js가 다시 켜지 않게
@@ -272,9 +362,21 @@ export default {
         // (이 화면을 떠난 뒤에 불리면 등록을 풀어요. 화면마다 새로 등록하니까 쌓이지 않게)
         const stopWatching = onNetworkChange((online) => {
             if (!view.isConnected) return stopWatching();
-            if (online) load(Object.keys(SOURCES).filter(id => state[id]?.status !== 'ok'), true);
-            else draw();
+            if (online) {
+                load(Object.keys(SOURCES).filter(id => state[id]?.status !== 'ok'), true);
+                mountWidget(widgetBox);
+            } else {
+                draw();
+            }
         });
+
+        // 국내 증시 자동 갱신: 이 화면을 보고 있고(탭이 보임), 온라인이고, 장중인 지수가 있을 때만 1분마다
+        // (setInterval은 MFC의 SetTimer와 같아요. 화면을 떠나면 다음 차례에 스스로 멈춰요)
+        const autoTimer = setInterval(() => {
+            if (!view.isConnected) return clearInterval(autoTimer);
+            if (document.hidden || !isOnline() || state.kr?.status === 'loading') return;
+            if (state.kr?.data?.items.some(it => it.open)) load(['kr'], true);
+        }, AUTO_REFRESH_MS);
 
         view.addEventListener('click', (e) => {
             if (e.target.closest('[data-refresh]')) return load(Object.keys(SOURCES), true);

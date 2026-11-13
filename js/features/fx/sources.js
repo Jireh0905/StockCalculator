@@ -4,7 +4,8 @@
  * 출처마다 함수 하나씩. 받은 응답을 화면이 쓰기 좋은 숫자로 정리해서 돌려줘요.
  * MFC로 치면 Document 쪽이에요. 화면(index.js)은 이 파일이 어디서 받는지 몰라도 돼요.
  *
- * 모두 키 없이, 브라우저에서 바로 읽을 수 있는 곳만 골랐어요 (CORS 허용 확인).
+ * 모두 키 없이, 브라우저에서 바로 읽을 수 있는 곳만 골랐어요 (CORS 허용 확인, 네이버는 JSONP).
+ *   kr        국내 지수·코스피200 선물 (네이버, core/naver.js)  실시간 (비공식)
  *   fx        유럽중앙은행 기준 환율 (Frankfurter)  하루 한 번
  *   fed       뉴욕 연은 기준 금리·실효 금리          하루 한 번
  *   treasury  미국 재무부 국채 금리 (CSV)           하루 한 번
@@ -15,6 +16,7 @@
  * 각 함수는 { ...값, date 또는 time } 을 돌려주고, 실패하면 오류를 던져요 (throw).
  */
 import { netFetch } from '../../core/network.js';
+import { loadIndices } from '../../core/naver.js';
 
 /** 오래 기다리지 않게: 10초 안에 답이 없으면 실패로 봐요 */
 const TIMEOUT = 10000;
@@ -183,6 +185,18 @@ export async function loadBinance() {
     return { price, prev: price - num(t.priceChange, '24시간 변화'), time: t.closeTime ?? Date.now() };
 }
 
+/* ---------- 한국 기준 금리 (직접 갱신) ---------- */
+
+/**
+ * 한국은행 기준 금리. 받아올 곳이 없어서(한국은행 API는 브라우저에서 막혀요) 코드에 적어둬요.
+ * 1년에 8번 금융통화위원회가 정하니까, 바뀌면 여기 세 줄만 고치면 돼요. (출처: 한국은행 ECOS 722Y001)
+ */
+export const KR_BASE_RATE = {
+    rate: 3.0,           // 지금 기준 금리 (%)
+    since: '2026-08-27', // 이 값이 적용된 날
+    prev: 2.75,          // 바로 전 기준 금리 (%)
+};
+
 /** 트로이온스 → 그램 (금 무게 단위) */
 export const GRAMS_PER_OZ = 31.1034768;
 
@@ -191,6 +205,7 @@ export const GRAMS_PER_OZ = 31.1034768;
  * 금 원/g처럼 두 출처를 섞는 값은 화면이 둘 다 받은 뒤에 계산해요.
  */
 export const SOURCES = {
+    kr: { name: '국내 증시', load: () => loadIndices() },
     fx: { name: '환율', load: loadFx },
     fed: { name: '기준 금리', load: loadFed },
     treasury: { name: '국채 금리', load: loadTreasury },

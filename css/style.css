@@ -1370,16 +1370,29 @@ body.sheet-open .sheet { transform: translate(-50%, 0); visibility: visible; }
 .mk-foot .mini-btn { margin-left: 0; padding: 5px 10px; font-size: 0.75rem; }
 .mk-note { margin: 10px 0 0; font-size: 0.6875rem; line-height: 1.5; color: var(--text-3); }
 
-/* 넓을 때: 왼쪽에 환율·금/비트코인, 오른쪽에 미국 금리 (좁을 때는 환율 → 금리 → 금/비트코인 순서로 한 줄씩) */
+.mk-live { color: var(--up); font-weight: 600; }
+.mk-widget { min-height: 190px; margin: 4px -4px 0; }
+.mk-widget .mk-msg { justify-content: center; min-height: 190px; }
+
+/* 좁을 때: 한 줄로 국내 증시 → 해외 선물 → 환율 → 금리 → 금·비트코인
+ * (두 열 묶음(.mk-col)을 display: contents로 "없는 셈" 치면, 카드들이 바로 세로 목록이 되어 order로 순서를 정할 수 있어요) */
+.mk-grid { display: flex; flex-direction: column; }
+.mk-col { display: contents; }
+.mk-slot[data-slot="kr"] { order: 1; }
+.mk-slot[data-slot="fut"] { order: 2; }
+.mk-slot[data-slot="fx"] { order: 3; }
+.mk-slot[data-slot="rates"] { order: 4; }
+.mk-slot[data-slot="coin"] { order: 5; }
+/* 넓을 때: 왼쪽 열(국내 증시·환율·금/비트코인) + 오른쪽 열(해외 선물·금리) */
 @container (min-width: 760px) {
     .mk-page { max-width: 920px; }
     .mk-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        grid-template-areas: "fx rates" "coin rates";
         gap: 0 20px;
         align-items: start;
     }
+    .mk-col { display: block; min-width: 0; }
 }
 
 /* ---------- 키보드로 이동할 때만 포커스 테두리 표시 ---------- */
