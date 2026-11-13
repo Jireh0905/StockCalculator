@@ -1373,8 +1373,6 @@ body.sheet-open .sheet { transform: translate(-50%, 0); visibility: visible; }
 .mk-note { margin: 10px 0 0; font-size: 0.6875rem; line-height: 1.5; color: var(--text-3); }
 
 .mk-live { color: var(--up); font-weight: 600; }
-.mk-widget { min-height: 190px; margin: 4px -4px 0; }
-.mk-widget .mk-msg { justify-content: center; min-height: 190px; }
 
 /* 좁을 때: 한 줄로 국내 증시 → 해외 선물 → 환율 → 금리 → 금·비트코인
  * (두 열 묶음(.mk-col)을 display: contents로 "없는 셈" 치면, 카드들이 바로 세로 목록이 되어 order로 순서를 정할 수 있어요) */

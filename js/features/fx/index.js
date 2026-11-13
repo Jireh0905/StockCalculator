@@ -6,7 +6,7 @@
  *
  * 계산기가 아니라서 국내/해외 버튼·입력값·기록이 없어요 (records: false → 기록 버튼도 숨겨요).
  *
- * 출처 7곳을 한꺼번에 요청하고, 하나씩 도착할 때마다 다시 그려요. (해외 선물은 TradingView 위젯)
+ * 출처 8곳을 한꺼번에 요청하고, 하나씩 도착할 때마다 다시 그려요.
  * 한 곳이 실패해도 그 줄만 "불러오지 못했어요 · 다시 시도"가 나오고 나머지는 그대로예요.
  */
 import { SOURCES, TENORS, dollarIndex, GRAMS_PER_OZ, KR_BASE_RATE } from './sources.js';
@@ -125,48 +125,34 @@ function krCard() {
         </section>`;
 }
 
-/**
- * 해외 선물: TradingView 위젯 (그림으로 끼워 넣는 iframe이라 값을 꺼낼 수는 없어요)
- * 진짜 선물(NQ1! 등)은 무료 위젯에서 막혀 있어서, 선물을 따라 움직이는 CFD 시세를 보여줘요.
- */
-const FUTURES = [
-    ['OANDA:NAS100USD', '나스닥100'],
-    ['TVC:USOIL', 'WTI 원유'],
-    ['TVC:GOLD', '금'],
-];
+/** 트레이딩뷰 값의 출처·지연 글자: "트레이딩뷰 · 10분 지연" */
+const tvMeta = (quote) => `트레이딩뷰${quote?.delay ? ` · ${quote.delay}` : ''}`;
 
-/** 해외 선물 카드의 겉모양 (위젯은 mountWidget이 한 번만 넣어요. 다시 그리면 위젯이 새로 로딩돼서) */
-const futuresCard = () => `
-    <section class="card mk-card">
-        <h2 class="card-title">해외 선물 <span class="card-title-note">참고</span></h2>
-        <p class="mk-meta">TradingView · 실시간</p>
-        <div class="mk-widget" data-widget></div>
-        <p class="mk-note">선물을 따라 움직이는 CFD 시세예요. 그림으로 끼워 넣은 것이라 계산기에 넣을 수는 없어요.</p>
-    </section>`;
-
-/** 위젯 넣기 (오프라인이면 안내만, 연결되면 다시 불러요) */
-function mountWidget(box) {
-    if (!box || box.dataset.loaded) return;
-    if (!isOnline()) {
-        box.innerHTML = '<p class="mk-msg">인터넷에 연결되면 보여요</p>';
-        return;
+/** 해외 선물: 트레이딩뷰 숫자 (근월물 연결, 10분 지연) */
+function futuresCard() {
+    let body = placeholder('tv');
+    if (!body) {
+        body = state.tv.data.futures.map(f => f.quote
+            ? row(f.name, f.unit, fixed(f.quote.value), change(f.quote.value, f.quote.prev))
+            : row(f.name, f.unit, '—')).join('');
     }
-    box.dataset.loaded = 'true';
-    box.innerHTML = '<div class="tradingview-widget-container"><div class="tradingview-widget-container__widget"></div></div>';
-    // TradingView 위젯은 <script> 안에 설정(JSON)을 넣는 방식이에요
-    const script = document.createElement('script');
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js';
-    script.async = true;
-    script.textContent = JSON.stringify({
-        width: '100%',
-        height: 190,
-        locale: 'kr',
-        colorTheme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-        isTransparent: true,
-        showSymbolLogo: false,
-        symbolsGroups: [{ name: '해외 선물', symbols: FUTURES.map(([name, displayName]) => ({ name, displayName })) }],
-    });
-    box.firstChild.append(script);
+    const first = state.tv?.data?.futures.find(f => f.quote)?.quote;
+    const meta = state.tv?.data ? `${tvMeta(first)} · ${timeOf('tv')}${staleNote('tv')}` : '트레이딩뷰';
+    return `
+        <section class="card mk-card">
+            <h2 class="card-title">해외 선물</h2>
+            <p class="mk-meta">${meta}</p>
+            <ul class="mk-list">${body}</ul>
+            <p class="mk-note">가장 가까운 만기(근월물)를 이어 붙인 값이에요. 트레이딩뷰 사이트가 쓰는 주소라 공식 API가 아니에요.
+                이 화면을 보고 있으면 1분마다 새로 받아요.</p>
+        </section>`;
+}
+
+/** 달러 인덱스: 트레이딩뷰 실제 값이 있으면 그것, 없으면 유럽중앙은행 환율로 계산한 근사값 */
+function dxyRow(now, prev) {
+    const dxy = state.tv?.data?.dxy;
+    if (dxy) return row('달러 인덱스', tvMeta(dxy), fixed(dxy.value), change(dxy.value, dxy.prev));
+    return row('달러 인덱스', '근사값 · 6개 통화로 계산', fixed(dollarIndex(now)), change(dollarIndex(now), dollarIndex(prev)));
 }
 
 function fxCard() {
@@ -183,7 +169,7 @@ function fxCard() {
             row('원/100엔', '100엔', fixed(krwPer(now, 'JPY', 100)), change(krwPer(now, 'JPY', 100), krwPer(prev, 'JPY', 100))),
             row('원/위안', '1위안', fixed(krwPer(now, 'CNY')), change(krwPer(now, 'CNY'), krwPer(prev, 'CNY'))),
             row('원/유로', '1유로', fixed(krwPer(now, 'EUR')), change(krwPer(now, 'EUR'), krwPer(prev, 'EUR'))),
-            row('달러 인덱스', '근사값 · 6개 통화로 계산', fixed(dollarIndex(now)), change(dollarIndex(now), dollarIndex(prev))),
+            dxyRow(now, prev),
         ].join('');
 
         // 해외 계산기들이 함께 쓰는 기준 환율에 넣기 (시장 바의 "오늘 환율"과 같은 값)
@@ -234,11 +220,22 @@ function ratesCard() {
     const krRows = row('기준 금리', `${kr.since.slice(0, 4)}년 ${shortDate(kr.since)}부터 · 전 ${fixed(kr.prev)}%`, `${fixed(kr.rate)}%`, bpChange(kr.rate, kr.prev));
     const krMeta = '한국은행 · 코드에 적어 둔 값 (바뀌면 직접 고쳐요)';
 
+    // 한국 국채 금리: 트레이딩뷰 (실시간)
+    let krBonds = placeholder('tv');
+    if (!krBonds) {
+        krBonds = state.tv.data.krBonds.map(b => b.quote
+            ? row(b.label, '', `${fixed(b.quote.value, 3)}%`, bpChange(b.quote.value, b.quote.prev))
+            : row(b.label, '', '—')).join('');
+    }
+    const firstBond = state.tv?.data?.krBonds.find(b => b.quote)?.quote;
+    const krBondMeta = state.tv?.data ? `${tvMeta(firstBond)}${staleNote('tv')}` : '트레이딩뷰';
+
     return `
         <section class="card mk-card">
             <h2 class="card-title">금리</h2>
             <ul class="mk-list">
                 ${section('한국 기준 금리', krMeta)}${krRows}
+                ${section('한국 국채 금리', krBondMeta)}${krBonds}
                 ${section('미국 기준 금리', fedMeta)}${fed}
                 ${section('미국 국채 금리', ustMeta)}${ust}
             </ul>
@@ -303,19 +300,17 @@ export default {
                         <div class="mk-slot" data-slot="coin"></div>
                     </div>
                     <div class="mk-col">
-                        <div class="mk-slot" data-slot="fut">${futuresCard()}</div>
+                        <div class="mk-slot" data-slot="fut"></div>
                         <div class="mk-slot" data-slot="rates"></div>
                     </div>
                 </div>
             </div>`;
         const updated = view.querySelector('[data-updated]');
         const refreshBtn = view.querySelector('[data-refresh]');
-        const widgetBox = view.querySelector('[data-widget]');
-        // 다시 그리는 카드 (해외 선물 위젯은 한 번만 넣고 다시 그리지 않아요)
+        // 다시 그리는 카드
         const slots = {
-            kr: krCard, fx: fxCard, rates: ratesCard, coin: coinCard,
+            kr: krCard, fut: futuresCard, fx: fxCard, rates: ratesCard, coin: coinCard,
         };
-        mountWidget(widgetBox);
 
         const draw = () => {
             if (!view.isConnected) return;   // 기다리는 동안 다른 화면으로 갔으면 그리지 않아요
@@ -364,18 +359,21 @@ export default {
             if (!view.isConnected) return stopWatching();
             if (online) {
                 load(Object.keys(SOURCES).filter(id => state[id]?.status !== 'ok'), true);
-                mountWidget(widgetBox);
             } else {
                 draw();
             }
         });
 
-        // 국내 증시 자동 갱신: 이 화면을 보고 있고(탭이 보임), 온라인이고, 장중인 지수가 있을 때만 1분마다
+        // 자동 갱신: 이 화면을 보고 있고(탭이 보임), 온라인일 때만 1분마다
+        //   국내 증시는 장중일 때만, 트레이딩뷰(선물·달러 인덱스·국채)는 늘
         // (setInterval은 MFC의 SetTimer와 같아요. 화면을 떠나면 다음 차례에 스스로 멈춰요)
         const autoTimer = setInterval(() => {
             if (!view.isConnected) return clearInterval(autoTimer);
-            if (document.hidden || !isOnline() || state.kr?.status === 'loading') return;
-            if (state.kr?.data?.items.some(it => it.open)) load(['kr'], true);
+            if (document.hidden || !isOnline()) return;
+            const due = [];
+            if (state.kr?.status !== 'loading' && state.kr?.data?.items.some(it => it.open)) due.push('kr');
+            if (state.tv?.status !== 'loading' && state.tv?.data) due.push('tv');   // 선물은 거의 24시간 거래
+            if (due.length) load(due, true);
         }, AUTO_REFRESH_MS);
 
         view.addEventListener('click', (e) => {

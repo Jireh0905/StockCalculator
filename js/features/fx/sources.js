@@ -6,6 +6,7 @@
  *
  * 모두 키 없이, 브라우저에서 바로 읽을 수 있는 곳만 골랐어요 (CORS 허용 확인, 네이버는 JSONP).
  *   kr        국내 지수·코스피200 선물 (네이버, core/naver.js)  실시간 (비공식)
+ *   tv        해외 선물·달러 인덱스·한국 국채 (트레이딩뷰, core/tradingview.js)  선물 10분 지연, 나머지 실시간 (비공식)
  *   fx        유럽중앙은행 기준 환율 (Frankfurter)  하루 한 번
  *   fed       뉴욕 연은 기준 금리·실효 금리          하루 한 번
  *   treasury  미국 재무부 국채 금리 (CSV)           하루 한 번
@@ -17,6 +18,7 @@
  */
 import { netFetch } from '../../core/network.js';
 import { loadIndices } from '../../core/naver.js';
+import { scan, quoteOf } from '../../core/tradingview.js';
 
 /** 오래 기다리지 않게: 10초 안에 답이 없으면 실패로 봐요 */
 const TIMEOUT = 10000;
@@ -185,6 +187,37 @@ export async function loadBinance() {
     return { price, prev: price - num(t.priceChange, '24시간 변화'), time: t.closeTime ?? Date.now() };
 }
 
+/* ---------- 트레이딩뷰: 해외 선물·달러 인덱스·한국 국채 ---------- */
+
+/** 해외 선물 (근월물 연결): [티커, 이름, 단위] */
+export const TV_FUTURES = [
+    ['CME_MINI:NQ1!', '나스닥100 선물', '포인트'],
+    ['CME_MINI:ES1!', 'S&P500 선물', '포인트'],
+    ['NYMEX:CL1!', 'WTI 원유 선물', '$/배럴'],
+    ['COMEX:GC1!', '금 선물', '$/온스'],
+];
+const TV_DXY = 'TVC:DXY';
+/** 한국 국채 금리: [티커, 만기] */
+export const TV_KR_BONDS = [['TVC:KR03Y', '3년'], ['TVC:KR10Y', '10년']];
+
+/**
+ * 트레이딩뷰에서 한 번의 요청으로 선물 4개 + 달러 인덱스 + 한국 국채 2개를 받아요.
+ * 각 값은 { value, prev, change, rate, delay } (core/tradingview.js의 quoteOf). 못 받은 값은 null.
+ */
+export async function loadTv() {
+    const tickers = [...TV_FUTURES.map(f => f[0]), TV_DXY, ...TV_KR_BONDS.map(b => b[0])];
+    const rows = await scan(tickers, ['close', 'change', 'change_abs', 'update_mode']);
+    const q = (t) => quoteOf(rows.get(t));
+    const data = {
+        time: Date.now(),
+        futures: TV_FUTURES.map(([t, name, unit]) => ({ name, unit, quote: q(t) })),
+        dxy: q(TV_DXY),
+        krBonds: TV_KR_BONDS.map(([t, label]) => ({ label, quote: q(t) })),
+    };
+    if (!data.dxy && data.futures.every(f => !f.quote)) throw new Error('트레이딩뷰 값이 없어요');
+    return data;
+}
+
 /* ---------- 한국 기준 금리 (직접 갱신) ---------- */
 
 /**
@@ -206,6 +239,7 @@ export const GRAMS_PER_OZ = 31.1034768;
  */
 export const SOURCES = {
     kr: { name: '국내 증시', load: () => loadIndices() },
+    tv: { name: '트레이딩뷰 시세', load: loadTv },
     fx: { name: '환율', load: loadFx },
     fed: { name: '기준 금리', load: loadFed },
     treasury: { name: '국채 금리', load: loadTreasury },
